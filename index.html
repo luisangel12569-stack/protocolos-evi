@@ -306,11 +306,11 @@ var Calc = (function () {
   }
 
   // Bornes para resistencia de devanados
-  function bornesRes(lado, g, estilo, mono) {
+  function bornesRes(lado, g, estilo, mono, modo) { // modo B.T.: 'ff' fase-fase (por defecto) o 'fn' fase-neutro
     var p = parseGrupo(g);
     if (mono || p.mono) return estilo === 'P' ? [lado === 'AT' ? 'P1-P2' : 'S1-S2'] : [lado === 'AT' ? 'H1-H2' : 'X1-X2'];
     if (lado === 'AT') return estilo === 'H' ? ['H1-H2', 'H2-H3', 'H3-H1'] : ['U-V', 'V-W', 'W-U'];
-    if (p.lvN) return estilo === 'H' ? ['X1-X0', 'X2-X0', 'X3-X0'] : ['n-u', 'n-v', 'n-w'];
+    if (p.lvN && modo === 'fn') return estilo === 'H' ? ['X1-X0', 'X2-X0', 'X3-X0'] : ['n-u', 'n-v', 'n-w'];
     return estilo === 'H' ? ['X1-X2', 'X2-X3', 'X3-X1'] : ['u-v', 'v-w', 'w-u'];
   }
 
@@ -693,7 +693,7 @@ function nuevoProtocolo(tipo, cfg) {
     pruebas: {}, inst: {},
     med: {
       ais: { rows: t.ais.map(function (a) { return { lbl: a[0], v: a[1], val: '' }; }) },
-      res: { tmed: '', corr: false, umbral: 2, v: {}, rows: t.resRows ? clone(t.resRows) : null },
+      res: { tmed: '', corr: false, umbral: 2, btModo: 'ff', v: {}, rows: t.resRows ? clone(t.resRows) : null },
       rel: {},
       vac: { bt: 0, V: '', I: ['', '', ''], W: ['', '', ''] },
       cc: { rows: [] },
@@ -854,9 +854,10 @@ function estructura(p, cfg) {
     E.atV.forEach(function (v, j) {
       E.resRows.push({ key: 'AT' + j, lado: 'AT', v: v, lbl: tec.lados[0] + ' ' + fmtTension(v), cols: Calc.bornesRes('AT', g0, tec.bornes, E.mono), u: 'Ω', pn: false });
     });
-    var pg = Calc.parseGrupo(g0);
+    var pg = Calc.parseGrupo(g0), modoBT = p.med.res.btModo || 'fn'; // protocolos guardados antes de la opción: fase-neutro
+    E.resNeutro = pg.lvN && !E.mono && !E.auto;
     E.btV.forEach(function (v, j) {
-      E.resRows.push({ key: 'BT' + j, lado: 'BT', v: v, lbl: tec.lados[1] + ' ' + fmtTension(v), cols: Calc.bornesRes('BT', g0, tec.bornes, E.mono), u: 'mΩ', pn: pg.lvN && !E.mono && !E.auto });
+      E.resRows.push({ key: 'BT' + j, lado: 'BT', v: v, lbl: tec.lados[1] + ' ' + fmtTension(v), cols: Calc.bornesRes('BT', g0, tec.bornes, E.mono, modoBT), u: 'mΩ', pn: E.resNeutro && modoBT === 'fn' });
     });
   }
   var tmed = N(p.med.res.tmed);
@@ -1619,6 +1620,7 @@ function formPaso3(p, cfg) {
         break;
       case 'res':
         h2 += '<div class="g4">' + campo('T° de medición (°C)', inp('med.res.tmed', p.med.res.tmed, { num: 1, ph: '= T amb' })) + campo('Umbral desbalance (%)', inp('med.res.umbral', p.med.res.umbral, { num: 1 })) +
+          (E.resNeutro ? campo('Medida en ' + esc(p.tec.lados[1]), sel('med.res.btModo', p.med.res.btModo || 'fn', [['ff', 'Fase-fase (' + (p.tec.bornes === 'H' ? 'X1-X2' : 'u-v') + ')'], ['fn', 'Fase-neutro (' + (p.tec.bornes === 'H' ? 'X1-X0' : 'n-u') + ')']], { s: 1 })) : '') +
           '<div class="campo span2">' + chk('med.res.corr', p.med.res.corr, 'Mostrar corrección a T° de referencia (' + (OK(E.tref) ? E.tref + ' °C' : 'sin Tref') + ')') + '</div></div>';
         h2 += '<table class="ed"><tr><th>Devanado</th><th colspan="3">Valores</th><th>Desbalance</th><th>Promedio</th></tr>' + E.resRows.map(function (r) {
           return '<tr><td>' + esc(r.lbl) + ' (' + r.u + ')</td>' + [0, 1, 2].map(function (i) {
@@ -2060,6 +2062,7 @@ function guardarLuego() { clearTimeout(tGuardar); tGuardar = setTimeout(guardarP
 /* ---------- Ejemplo OT 1440 ---------- */
 function ejemplo1440() { // valores reales del protocolo OT 1440 (Fundo Cantera, serie 15681)
   var p = nuevoProtocolo('TTON', CFG);
+  p.med.res.btModo = 'fn'; // en la OT 1440 la B.T. se midió fase-neutro (n-u)
   p.cab = { cliente: 'FUNDO CANTERA S.A.C.', proyecto: '', ot: '1440', serie: '15681', anio: '2026', marca: 'ELECTRO VOLT INGs.', norma: 'IEC 60076-1', fecha: '2025-12-22' };
   Object.assign(p.tec, {
     pot: 500, potU: 'kVA', niveles: [{ v: 10000, g: 'Dyn5', n: 2, pct: 3.3, bt: 0 }, { v: 22900, g: 'YNyn6', n: 2, pct: 2.5, bt: 0 }],
