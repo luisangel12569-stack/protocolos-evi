@@ -774,20 +774,20 @@ function sincronizarAis(p) {
 
 // Conversión del cortocircuito al 100 % de In, paso a paso (para el Excel y el paso 3)
 function pasosCC(c, E, p) {
-  var D = Calc.fmtD, S = E.S, nV = function (x) { return String(+(+x).toFixed(2)); }, Vn = c.vtap, I = N(c.row.I), V = N(c.row.V), k = c.factor;
+  var D = Calc.fmtD, D2 = function (x) { return OK(x) ? x.toFixed(2) : ''; }, S = E.S, nV = function (x) { return String(+(+x).toFixed(2)); }, Vn = c.vtap, I = N(c.row.I), V = N(c.row.V), k = c.factor;
   var W = (c.row.W || []).slice(0, E.fases === 1 ? 1 : 3).map(N).filter(OK);
   var L = [];
   L.push('1) Corriente nominal de la posición: In = ' + (E.fases === 1 ? 'S / Vn = ' + Math.round(S) + ' / ' + nV(Vn) : 'S / (√3 × Vn) = ' + Math.round(S) + ' / (1.732 × ' + nV(Vn) + ')') + ' = ' + D(c.In) + ' A');
   L.push('2) Corriente alcanzada: I / In = ' + D(I) + ' / ' + D(c.In) + ' = ' + Calc.fmt(c.pctI, 2) + ' % de In');
   L.push('3) Factor de conversión: k = In / I = ' + D(c.In) + ' / ' + D(I) + ' = ' + k.toFixed(4));
   L.push('4) Tensión al 100 %: V100 = V medida × k = ' + D(V) + ' × ' + k.toFixed(4) + ' = ' + D(c.VIn) + ' V');
-  L.push('5) Tensión de cortocircuito: Vcc = V100 / Vn × 100 = ' + D(c.VIn) + ' / ' + nV(Vn) + ' × 100 = ' + D(c.Vcc) + ' %');
+  L.push('5) Tensión de cortocircuito: Vcc = V100 / Vn × 100 = ' + D(c.VIn) + ' / ' + nV(Vn) + ' × 100 = ' + D2(c.Vcc) + ' %');
   L.push('6) Pérdidas medidas: Wt = ' + (W.length > 1 ? W.map(D).join(' + ') + ' = ' : '') + D(c.Pmed) + ' W');
   L.push('7) Pérdidas al 100 % (varían con el cuadrado de la corriente): P100 = Wt × k² = ' + D(c.Pmed) + ' × ' + k.toFixed(4) + '² = ' + D(c.Pmed) + ' × ' + (k * k).toFixed(4) + ' = ' + D(c.PIn) + ' W');
-  if (p.opt.modoCorr === 'iec') L.push('8) Corrección a ' + E.tref + ' °C según IEC 60076-1: P = ' + D(c.Pref) + ' W, Vcc = ' + D(c.Vccref) + ' %');
+  if (p.opt.modoCorr === 'iec') L.push('8) Corrección a ' + E.tref + ' °C según IEC 60076-1: P = ' + D(c.Pref) + ' W, Vcc = ' + D2(c.Vccref) + ' %');
   else {
     L.push('8) Pérdidas a ' + (OK(E.tref) ? E.tref : 75) + ' °C: P100 × 1.05 = ' + D(c.PIn) + ' × 1.05 = ' + D(c.Pref) + ' W');
-    L.push('9) Vcc a ' + (OK(E.tref) ? E.tref : 75) + ' °C: Vcc × 1.05 = ' + D(c.Vcc) + ' × 1.05 = ' + D(c.Vccref) + ' %');
+    L.push('9) Vcc a ' + (OK(E.tref) ? E.tref : 75) + ' °C: Vcc × 1.05 = ' + D2(c.Vcc) + ' × 1.05 = ' + D2(c.Vccref) + ' %');
   }
   return L;
 }
@@ -1130,12 +1130,18 @@ function renderProtocolo(p, cfg, opts) {
   if ((TIPOS[p.tipo] || {}).servicio) return renderServicio(p, cfg, opts);
   var B = !!opts.blank, E = estructura(p, cfg), F = Calc.fmt, t = p.tec;
   var seco = !!E.t.seco, num = 0, S = {}, LD = ladosEVI(E);
-  var unidV = E.enKV ? 'KV' : 'V';
+  var unidV = E.enKV ? 'KV' : 'V', X = !!opts.excel;
 
-  function v(x, cls) { // celda de valor medido
+  // Modo Excel: atributos con el nombre de la celda (x), su fórmula con {nombres} (f), valor exacto (n) y formato (z)
+  function ax(o) {
+    if (!X || !o) return '';
+    return ['x', 'f', 'n', 'z'].map(function (k) { return o[k] === undefined || o[k] === null || o[k] === '' || (k === 'n' && !OK(o[k])) ? '' : ' data-' + k + '="' + esc(o[k]) + '"'; }).join('');
+  }
+  function v(x, cls, at) { // celda de valor medido
+    at = at || '';
     if (B) return '<td class="vacio' + (cls ? ' ' + cls : '') + '"></td>';
-    if (x === '' || x === undefined || x === null) return '<td class="miss">—</td>';
-    return '<td' + (cls ? ' class="' + cls + '"' : '') + '>' + x + '</td>';
+    if (x === '' || x === undefined || x === null) return '<td class="miss"' + at + '>—</td>';
+    return '<td' + (cls ? ' class="' + cls + '"' : '') + at + '>' + x + '</td>';
   }
   function res(okv) {
     if (B) return '<td class="vacio"></td>';
@@ -1188,7 +1194,7 @@ function renderProtocolo(p, cfg, opts) {
         break;
       case 'rel':
         h = bar('rel');
-        E.rels.forEach(function (nv) {
+        E.rels.forEach(function (nv, ri) {
           var nb = nv.bornes.length, mono = nb === 1;
           var wl = mono ? [12, 15, 15, 16, 16, 13, 13] : [12, 14, 13, 14].concat(Array(nb).fill(35 / nb)).concat([12]);
           h += '<table class="x rel">' + cols(wl) +
@@ -1196,47 +1202,58 @@ function renderProtocolo(p, cfg, opts) {
             nv.bornes.map(function (b) { return '<td class="b">' + b[0].replace('-', ' - ') + '</td>'; }).join('') + '<td class="b">% Error</td>' + (mono ? '<td rowspan="2" class="b">RESULTADO</td>' : '') + '</tr>' +
             '<tr><td class="b">V1</td><td class="b">V2</td>' + nv.bornes.map(function (b) { return '<td class="b">' + b[1].replace('-', ' - ') + '</td>'; }).join('') + '<td class="b">≤ 0.5%</td></tr>';
           nv.filas.forEach(function (f) {
-            var nom = f.ti === nv.n && nv.n > 0 ? ' class="b"' : '';
-            h += '<tr' + nom + '><td>' + f.label + '</td><td>' + Math.round(f.vat) + '</td><td>' + nv.vbt + '</td><td class="b">' + Calc.fmtRel(f.teo) + '</td>' +
-              nv.bornes.map(function (b, i) { return v(d3(f.lect[i])); }).join('') +
-              v(OK(f.err) ? F(f.err, 2) + '%' : '', f.ok === false ? 'nconf' : '') + (mono ? res(f.ok) : '') + '</tr>';
+            var nom = f.ti === nv.n && nv.n > 0 ? ' class="b"' : '', k = 'r' + ri + '_' + f.ti + '_';
+            var fTeo = OK(nv.dis) ? nv.dis + '*{' + k + 'a}/' + nv.v : Calc.relFormula('{' + k + 'a}', '{' + k + 'b}', nv.g, E.auto, E.s3);
+            var fErr = 'IFERROR(ABS({' + k + 't}-AVERAGE({' + k + 'l0}:{' + k + 'l' + (nb - 1) + '}))/{' + k + 't},"")';
+            h += '<tr' + nom + '><td>' + f.label + '</td><td' + ax({ x: k + 'a', n: f.vat, z: '0' }) + '>' + Math.round(f.vat) + '</td><td' + ax({ x: k + 'b' }) + '>' + nv.vbt + '</td>' +
+              '<td class="b"' + ax({ x: k + 't', f: fTeo, n: f.teo, z: '0.000' }) + '>' + Calc.fmtRel(f.teo) + '</td>' +
+              nv.bornes.map(function (b, i) { return v(d3(f.lect[i]), '', ax({ x: k + 'l' + i, z: '0.000' })); }).join('') +
+              v(OK(f.err) ? F(f.err, 2) + '%' : '', f.ok === false ? 'nconf' : '', ax({ x: k + 'e', f: fErr, n: OK(f.err) ? f.err / 100 : NaN, z: '0.00%' })) +
+              (mono ? res(f.ok).replace('<td', '<td' + ax({ f: 'IF({' + k + 'e}="","",IF({' + k + 'e}<=0.005,"CONFORME","NO CONFORME"))' })) : '') + '</tr>';
           });
           h += '</table>';
         });
         break;
       case 'vac':
-        var vac = p.med.vac, vtxt = sinEsp(Calc.fmtV(E.vac.V)) + (E.vac.Vat ? ' / ' + Math.round(E.vac.Vat) : '');
+        var vac = p.med.vac, vtxt = sinEsp(Calc.fmtV(E.vac.V));
         var P0 = dd(E.vac.P0);
         h = bar('vac');
         if (E.mono) {
           h += '<table class="x">' + cols([25, 8, 25, 8, 34]) +
-            '<tr><td colspan="2" class="b">TENSION (' + (t.bornes === 'P' ? 'S1 - S2' : 'X1 - X2') + ')</td><td colspan="2" class="b">INTENSIDAD</td><td class="b">PERDIDA DE NUCLEO</td></tr>' +
-            '<tr><td>Lectura</td><td>Unidad</td><td>Lectura</td><td>Unidad</td><td>Wr</td></tr>' +
+            '<tr><td colspan="2" class="b">TENSION (' + (t.bornes === 'P' ? 'S1 - S2' : 'X1 - X2') + ')</td><td colspan="2" class="b">INTENSIDAD</td><td class="b">PERDIDA DE NUCLEO (W)</td></tr>' +
+            '<tr><td>Lectura</td><td>Unidad</td><td>Lectura</td><td>Unidad</td><td>Wr (W)</td></tr>' +
             '<tr><td>' + vtxt + '</td><td>V</td>' + v(dd(vac.I[0])) + '<td>A</td>' + v(P0, 'b') + '</tr></table>';
         } else {
           var etI = t.bornes === 'H' ? ['INTENSIDAD (H1)', 'INTENSIDAD (H2)', 'INTENSIDAD (H3)'] : ['INTENSIDAD (Iu)', 'INTENSIDAD (Iv)', 'INTENSIDAD (Iw)'];
           h += '<table class="x">' + cols([12, 5, 9, 4, 9, 4, 9, 4, 10, 10, 10, 14]) +
             '<tr><td colspan="2" class="b">TENSION</td>' + etI.map(function (x) { return '<td colspan="2" class="b">' + x + '</td>'; }).join('') +
-            '<td colspan="3" class="b">WATIMETROS</td><td rowspan="2" class="b">PERDIDA NÚCLEO</td></tr>' +
+            '<td colspan="3" class="b">WATIMETROS (W)</td><td rowspan="2" class="b">PERDIDA NÚCLEO (W)</td></tr>' +
             '<tr><td colspan="2">Lectura</td>' + etI.map(function () { return '<td colspan="2">Lectura</td>'; }).join('') + '<td>W1</td><td>W2</td><td>W3</td></tr>' +
             '<tr><td>' + vtxt + '</td><td>V</td>' + vac.I.slice(0, 3).map(function (x) { return v(dd(x)) + '<td>A</td>'; }).join('') +
-            vac.W.slice(0, 3).map(function (x) { return B ? v('') : '<td>' + dd(x) + '</td>'; }).join('') + v(P0, 'b') + '</tr></table>';
+            vac.W.slice(0, 3).map(function (x, i) { return B ? v('') : '<td' + ax({ x: 'vw' + i }) + '>' + dd(x) + '</td>'; }).join('') +
+            v(P0, 'b', ax({ f: 'IF(COUNT({vw0}:{vw2})=0,"",SUM({vw0}:{vw2}))', n: E.vac.P0, z: OK(E.vac.P0) && Math.abs(E.vac.P0) >= 10 ? '0.00' : '0.000' })) + '</tr></table>';
         }
         break;
       case 'cc':
         var tref = OK(E.tref) ? E.tref : 75, ta = E.cc.length && OK(N(E.cc[0].row.tamb)) ? N(E.cc[0].row.tamb) : 25;
-        h = bar('cc') + '<table class="x">' + cols([12, 9, 5, 9, 5, 16, 11, 11, 11, 11]) +
-          '<tr><td rowspan="3" class="b">Posición</td><td colspan="2" class="b">INTENSIDAD</td><td colspan="2" class="b">TENSION</td><td class="b">VATIMETROS</td><td colspan="2" rowspan="2" class="b">PERDIDAS EN LOS DEVANADOS</td><td colspan="2" rowspan="2" class="b">TENSION DE CORTO CIRCUITO</td></tr>' +
+        h = bar('cc') + '<table class="x"' + (X ? ' data-sec="cc"' : '') + '>' + cols([12, 9, 5, 9, 5, 16, 11, 11, 11, 11]) +
+          '<tr><td rowspan="3" class="b">Posición</td><td colspan="2" class="b">INTENSIDAD</td><td colspan="2" class="b">TENSION</td><td class="b">VATIMETROS (W)</td><td colspan="2" rowspan="2" class="b">PERDIDAS EN LOS DEVANADOS (W)</td><td colspan="2" rowspan="2" class="b">TENSION DE CORTO CIRCUITO (%)</td></tr>' +
           '<tr><td colspan="2" rowspan="2">Lectura</td><td colspan="2" rowspan="2">Lectura</td><td rowspan="2">Wt</td></tr>' +
           '<tr><td>a ' + ta + ' º C</td><td>a ' + tref + ' º C</td><td>a ' + ta + ' º C</td><td>a ' + tref + ' º C</td></tr>';
-        E.cc.forEach(function (c) {
+        var iec = p.opt.modoCorr === 'iec';
+        E.cc.forEach(function (c, ci) {
           var pos = (c.nivel.n > 0 && p.tec.tapEstilo !== 'num' ? c.label + '<br>' : '') + Math.round(c.vtap) + (E.btV.length > 1 ? ' / ' + c.vbt : '');
           // Si no se llegó a la corriente nominal, el protocolo muestra los valores ya llevados al 100 % de In
-          var parcial = OK(c.factor) && c.factor !== 1;
-          var cI = dd(parcial ? c.In : c.row.I), cV = dd(parcial ? c.VIn : c.row.V);
-          var cW = dd(parcial ? c.PIn : c.Pmed);
-          h += '<tr><td>' + pos + '</td>' + v(cI) + '<td>A</td>' + v(cV) + '<td>V</td>' + v(cW) +
-            v(dd(c.PIn)) + v(dd(c.Pref), c.alertaP ? 'warn' : '') + v(dd(c.Vcc)) + v(dd(c.Vccref), c.alertaV ? 'warn' : '') + '</tr>';
+          // (en el Excel van las lecturas reales y las fórmulas hacen la conversión)
+          var parcial = OK(c.factor) && c.factor !== 1, cv = !X && parcial, k = 'c' + ci + '_';
+          var cI = dd(cv ? c.In : c.row.I), cV = dd(cv ? c.VIn : c.row.V);
+          var cW = dd(cv ? c.PIn : c.Pmed);
+          var esc2 = parcial ? '*(' + (+c.In.toFixed(4)) + '/{' + k + 'i})' : '', zd = function (x) { return OK(x) && Math.abs(x) >= 10 ? '0.00' : '0.000'; };
+          h += '<tr><td>' + pos + '</td>' + v(cI, '', ax({ x: k + 'i' })) + '<td>A</td>' + v(cV, '', ax({ x: k + 'v' })) + '<td>V</td>' + v(cW, '', ax({ x: k + 'w' })) +
+            v(dd(c.PIn), '', ax({ x: k + 'p', f: 'IF({' + k + 'w}="","",IFERROR({' + k + 'w}' + (esc2 ? esc2 + '^2' : '') + ',""))', n: c.PIn, z: zd(c.PIn) })) +
+            v(dd(c.Pref), c.alertaP ? 'warn' : '', ax(iec ? { x: k + 'pr' } : { x: k + 'pr', f: 'IFERROR({' + k + 'p}*1.05,"")', n: c.Pref, z: zd(c.Pref) })) +
+            v(OK(c.Vcc) ? F(c.Vcc, 2) : '', '', ax({ x: k + 'vc', f: 'IF({' + k + 'v}="","",IFERROR({' + k + 'v}' + esc2 + '/' + (+(+c.vtap).toFixed(4)) + '*100,""))', n: c.Vcc, z: '0.00' })) +
+            v(OK(c.Vccref) ? F(c.Vccref, 2) : '', c.alertaV ? 'warn' : '', ax(iec ? { x: k + 'vr', z: '0.00' } : { x: k + 'vr', f: 'IFERROR({' + k + 'vc}*1.05,"")', n: c.Vccref, z: '0.00' })) + '</tr>';
         });
         h += '</table>';
         if (p.opt.modoCorr === 'iec' && !B) h += '<div class="nota">Corrección a ' + tref + ' °C según IEC 60076-1 (k = ' + E.k + ').</div>';
@@ -1295,7 +1312,7 @@ function renderProtocolo(p, cfg, opts) {
   return paginas.map(function (cuerpo, i) {
     var ultima = i === total - 1;
     return (opts.wrap ? '<div class="hoja-wrap">' : '') + '<div class="hoja ' + (vert ? 'vert' : 'horiz') + (mem ? ' membrete' : '') + (B ? ' blank' : '') + '"' + fondo + '><div class="hoja-in"><div class="marco">' +
-      encabezado(p, E, i + 1, total, B) + (i === 0 ? datosTecnicos(p, E, LD, unidV) : '') + cuerpo +
+      encabezado(p, E, i + 1, total, B) + (i === 0 ? datosTecnicos(p, E, LD, unidV, X && p.pruebas.cc && E.cc.length) : '') + cuerpo +
       (ultima ? observaciones(p, E, B) + firmas(p, cfg, B) : '') + '</div></div></div>' + (opts.wrap ? '</div>' : '');
   }).join('');
 }
@@ -1306,9 +1323,9 @@ function encabezado(p, E, pag, total, B) {
     '<tr><td class="cel l">CLIENTE</td><td class="b">' + esc(p.cab.cliente) + (p.cab.proyecto ? ' – ' + esc(p.cab.proyecto) : '') + '</td><td class="cel l">O.T.</td><td class="b">' + esc(p.cab.ot) + '</td></tr></table>';
 }
 
-function datosTecnicos(p, E, LD, unidV) {
+function datosTecnicos(p, E, LD, unidV, tccExcel) {
   var t = p.tec, c1, c2, c3, seco = !!E.t.seco;
-  var tcc = OK(E.vccMedido) ? Calc.fmt(E.vccMedido, 1) : (t.vccD !== '' ? t.vccD : '');
+  var tcc = OK(E.vccMedido) ? Calc.fmt(E.vccMedido, 2) : (t.vccD !== '' ? t.vccD : '');
   var mt = E.atV.map(function (x) { return E.enKV ? Calc.kv(x) : x; }).join(' - ');
   var bt = E.btV.filter(OK).map(function (x) { return E.enKV ? Calc.kv(x) : x; }).join(' - ');
   var grupos = unicos(E.niveles.map(function (n) { return n.g; })).join(' - ');
@@ -1319,7 +1336,7 @@ function datosTecnicos(p, E, LD, unidV) {
     c2 = [['Relación TT', m.relTT], ['Potencia / clase TT', [m.ttPot, m.ttClase].filter(Boolean).join(' – cl. ')], ['Relación TC', m.relTC], ['Potencia / clase TC', [m.tcPot, m.tcClase].filter(Boolean).join(' – cl. ')], ['Conexión', m.conexion], ['Polaridad', m.polaridad]];
     c3 = [['Nivel de Aislamiento', t.aisMT, 'KV BIL'], ['Ith', m.ith, 'kA'], ['Idyn', m.idyn, 'kA'], ['Montaje', t.montaje], ['Refrigeración', t.refr], ['Aceite', t.aceite], ['Altitud', t.alt, 'm.s.n.m.'], ['T amb máx.', m.tambMax, '°C'], ['Peso total', t.pesoTotal, 'Kg.']];
   } else {
-    c1 = [['Marca', p.cab.marca], ['N° de Serie', p.cab.serie], ['Tipo', p.tipo], ['Año', p.cab.anio], ['Norma', p.cab.norma], ['Frecuencia', t.frec + ' Hz'], [seco ? 'Vcc' : 'Tcc', tcc !== '' ? tcc + ' %' : '']];
+    c1 = [['Marca', p.cab.marca], ['N° de Serie', p.cab.serie], ['Tipo', p.tipo], ['Año', p.cab.anio], ['Norma', p.cab.norma], ['Frecuencia', t.frec + ' Hz'], [seco ? 'Vcc' : 'Tcc', tcc !== '' ? tcc + ' %' : '', '', tccExcel ? ' data-f="' + esc('IF({c0_vr}="",' + (OK(N(t.vccD)) ? N(t.vccD) : '""') + ',{c0_vr})') + '" data-z="0.00&quot; %&quot;"' + (OK(E.vccMedido) || OK(N(t.vccD)) ? ' data-n="' + (OK(E.vccMedido) ? E.vccMedido : N(t.vccD)) + '"' : '') : '']];
     c2 = [['Potencia', t.potDet || t.pot, t.potDet ? '' : t.potU.toUpperCase()], ['Tensión Nom. ' + LD[0], mt, unidV], ['Tensión Nom. ' + LD[1], bt, unidV], ['Grupo de conexión', grupos]];
     if (seco) c2 = c2.concat([['Clase de Aislamiento', t.clase], ['Refrigeración', t.refr], ['Montaje', t.montaje]]);
     else c2 = c2.concat([['Montaje', t.montaje], ['Refrigeración', t.refr], ['Aceite', t.aceite]]);
@@ -1333,7 +1350,7 @@ function datosTecnicos(p, E, LD, unidV) {
   var h = '<div class="bar bar0">DATOS TECNICOS DEL EQUIPO</div><table class="x dt"><colgroup>' +
     [10, 16, 14, 14, 6, 21, 11, 8].map(function (w) { return '<col style="width:' + w + '%">'; }).join('') + '</colgroup>';
   function cel(r, negrita, sinU) {
-    if (sinU) return r ? '<td class="l">' + esc(r[0]) + '</td><td' + (negrita ? ' class="b"' : '') + '>' + esc([r[1], r[2]].filter(Boolean).join(' ')) + '</td>' : '<td></td><td></td>';
+    if (sinU) return r ? '<td class="l">' + esc(r[0]) + '</td><td' + (negrita ? ' class="b"' : '') + (r[3] || '') + '>' + esc([r[1], r[2]].filter(Boolean).join(' ')) + '</td>' : '<td></td><td></td>';
     if (!r) return '<td></td><td></td><td></td>';
     return '<td class="l">' + esc(r[0]) + '</td><td' + (negrita ? ' class="b"' : '') + '>' + esc(r[1]) + '</td><td class="l">' + esc(r[2] || '') + '</td>';
   }
@@ -1650,7 +1667,7 @@ function formPaso3(p, cfg) {
             '<td>' + inp(b + '.I', c.row.I, { num: 1, w: '60px' }) + '</td><td>' + inp(b + '.V', c.row.V, { num: 1, w: '60px' }) + '</td>' +
             [0, 1, 2].slice(0, nWc).map(function (i) { return '<td>' + inp(b + '.W.' + i, (c.row.W || [])[i], { num: 1, w: '60px' }) + '</td>'; }).join('') +
             '<td>' + inp(b + '.tamb', c.row.tamb, { num: 1, w: '45px' }) + '</td><td>' + Calc.fmtI(c.In) + '</td><td>' + calc('cq' + ri, OK(c.pctI) ? F(c.pctI, 1) + ' %' : '', OK(c.pctI) && c.pctI < 50 ? 'warn' : '') + '</td>' +
-            '<td>' + calc('cp' + ri, Calc.fmtD(c.PIn)) + '</td><td>' + calc('cr' + ri, Calc.fmtD(c.Pref), 'b' + (c.alertaP ? ' warn' : '')) + '</td><td>' + calc('cv' + ri, Calc.fmtD(c.Vcc)) + '</td><td>' + calc('cw' + ri, Calc.fmtD(c.Vccref), 'b' + (c.alertaV ? ' warn' : '')) + '</td>' +
+            '<td>' + calc('cp' + ri, Calc.fmtD(c.PIn)) + '</td><td>' + calc('cr' + ri, Calc.fmtD(c.Pref), 'b' + (c.alertaP ? ' warn' : '')) + '</td><td>' + calc('cv' + ri, OK(c.Vcc) ? c.Vcc.toFixed(2) : '') + '</td><td>' + calc('cw' + ri, OK(c.Vccref) ? c.Vccref.toFixed(2) : '', 'b' + (c.alertaV ? ' warn' : '')) + '</td>' +
             '<td>' + boton('quitarFila', '✕', { arg: 'med.cc.rows|' + ri, cls: 'btn chico peligro' }) + '</td></tr>';
         });
         h2 += '</table>' + boton('agregarCC', '+ Agregar fila', { cls: 'btn chico' }) +
@@ -1752,360 +1769,188 @@ function formPaso5(p, cfg) {
   return h;
 }
 
-/* ===== Exportación a Excel (.xlsx) con el formato de los protocolos EVI (columnas B a M, fórmulas visibles) ===== */
+/* ===== Exportación a Excel (.xlsx) con la misma distribución que el PDF =====
+   Se dibuja el protocolo igual que la vista previa (fuera de pantalla) y se copia su geometría:
+   cada borde de celda del PDF es un borde de columna/fila del Excel, así las tablas quedan
+   alineadas como en el PDF. Las celdas con data-f llevan fórmulas (relación, error, vacío, corto). */
 function exportarExcel(p, cfg) {
-  var E = estructura(p, cfg), t = p.tec, ws = {}, merges = [], alturas = [], r = 2, numSec = 0;
-  var CEL = '0DC0FF', BAR = '00B0F0', NC = 12; // columnas B..M = 1..12
-  var colNotas = NC, filaNotas = 0; // notas fuera del área de impresión
-  function borde(c) {
-    var th = { style: 'thin', color: { rgb: '000000' } }, md = { style: 'medium', color: { rgb: '000000' } };
-    return { top: th, bottom: th, left: c === 1 ? md : th, right: c === NC ? md : th };
-  }
-  function estilo(o, c) {
-    o = o || {};
-    var s = {
-      font: { name: 'Arial', sz: o.sz || 9, bold: !!o.b, color: { rgb: o.blanco ? 'FFFFFF' : '000000' } },
-      alignment: { horizontal: o.al || 'center', vertical: 'center', wrapText: !!o.wrap },
-      border: borde(c)
-    };
-    if (o.fill) s.fill = { patternType: 'solid', fgColor: { rgb: o.fill } };
-    return s;
-  }
-  function A(c, rr) { return XLSX.utils.encode_cell({ c: c, r: rr === undefined ? r : rr }); }
-  function abs(ref) { return ref.replace(/^([A-Z]+)(\d+)$/, '$$$1$$$2'); }
-  function IFE(f) { return 'IFERROR(' + f + ',"")'; }
-  function zD(v) { v = N(v); return OK(v) && Math.abs(v) >= 10 ? '0.00' : '0.000'; } // 3 decimales bajo 10, si no 2
-  function celda(c, v, o) {
-    o = o || {};
-    var cell;
-    if (v && typeof v === 'object' && v.f) {
-      cell = { t: 'n', f: v.f };
-      if (typeof v.v === 'number' && OK(v.v)) cell.v = v.v;
-      else if (typeof v.v === 'string') { cell.t = 's'; cell.v = v.v; }
-    } else if (typeof v === 'number') cell = OK(v) ? { t: 'n', v: v } : { t: 's', v: '' };
-    else {
-      var txt = v === undefined || v === null ? '' : String(v).replace(/ /g, ' ');
-      var n = N(txt);
-      cell = (!o.txt && txt !== '' && OK(n) && /^\s*-?[\d.,]+\s*$/.test(txt)) ? { t: 'n', v: n } : { t: 's', v: txt };
-    }
-    cell.s = estilo(o, c);
-    if (o.z) cell.z = o.z;
-    ws[A(c)] = cell;
-    return A(c);
-  }
-  // Escribe una fila: items = [valor, columnas, opciones{rs: filas combinadas, ...}]; salto(n) deja columnas ocupadas por una combinación de arriba
-  function fila(items, alto) {
-    var c = 1, refs = [];
-    items.forEach(function (it) {
-      if (it[0] === null && it[2] && it[2].skip) { c += it[1]; refs.push(null); return; }
-      var span = it[1] || 1, o = it[2] || {}, rs = o.rs || 1;
-      refs.push(celda(c, it[0], o));
-      for (var k = 0; k < span; k++) for (var q = 0; q < rs; q++) if (k || q) {
-        var a = A(c + k, r + q);
-        if (!ws[a]) ws[a] = { t: 's', v: '', s: estilo(o, c + k) };
+  var E = estructura(p, cfg), K = 1.35, KF = 1.3; // escala px → Excel (geometría y letra)
+  var cont = document.createElement('div');
+  cont.style.cssText = 'position:absolute;left:-30000px;top:0;';
+  cont.innerHTML = renderProtocolo(p, cfg, { excel: true });
+  document.body.appendChild(cont);
+  var hojas;
+  try { hojas = Array.prototype.map.call(cont.querySelectorAll('.marco'), medirMarco); }
+  finally { document.body.removeChild(cont); }
+
+  // Bordes de columna comunes a todas las páginas
+  var xs = [];
+  hojas.forEach(function (h) { h.cajas.forEach(function (b) { xs.push(b.x0, b.x1); }); });
+  var colX = agrupar(xs, 2.5);
+  var NCOL = colX.length - 1, C0 = 1, ws = {}, merges = [], ocupado = {}, claves = {}, conF = [], imgs = [], filasPx = [], saltos = [];
+  var R0 = 1, hayNotas = 0; // fila 1 = margen
+  filasPx[0] = 6;
+  function A(c, r) { return XLSX.utils.encode_cell({ c: c, r: r }); }
+  function lado(w, md) { return w > 0 ? { style: md || w >= 1.5 ? 'medium' : 'thin', color: { rgb: '000000' } } : undefined; }
+  function cel(c, r) { var a = A(c, r); if (!ws[a]) ws[a] = { t: 's', v: '', s: { font: { name: 'Arial', sz: 9 }, border: {} } }; return ws[a]; }
+
+  hojas.forEach(function (h, ih) {
+    var filY = agrupar(h.cajas.reduce(function (a, b) { a.push(b.y0, b.y1); return a; }, []), 1.5);
+    var nF = filY.length - 1;
+    for (var i = 0; i < nF; i++) filasPx[R0 + i] = filY[i + 1] - filY[i];
+    function piso(lista, x) { var k = 0; lista.forEach(function (y, i) { if (y <= x + 0.5 && i < lista.length - 1) k = i; }); return k; }
+    function idx(lista, x) { var m = 0, d = 1e9; lista.forEach(function (y, k) { if (Math.abs(y - x) < d) { d = Math.abs(y - x); m = k; } }); return m; }
+    h.cajas.forEach(function (b) {
+      var c0 = idx(colX, b.x0), c1 = idx(colX, b.x1), r0 = idx(filY, b.y0), r1 = idx(filY, b.y1);
+      if (c1 <= c0 || r1 <= r0) return;
+      var libre = true;
+      for (var r = r0; r < r1 && libre; r++) for (var c = c0; c < c1; c++) if (ocupado[A(C0 + c, R0 + r)]) { libre = false; break; }
+      if (!libre) return;
+      for (r = r0; r < r1; r++) for (c = c0; c < c1; c++) {
+        ocupado[A(C0 + c, R0 + r)] = 1;
+        var x = cel(C0 + c, R0 + r);
+        x.s = { font: b.font, alignment: b.al, border: {} };
+        if (b.fill) x.s.fill = { patternType: 'solid', fgColor: { rgb: b.fill } };
+        if (r === r0 && lado(b.bt)) x.s.border.top = lado(b.bt);
+        if (r === r1 - 1 && lado(b.bb)) x.s.border.bottom = lado(b.bb);
+        if (c === c0 && lado(b.bl)) x.s.border.left = lado(b.bl);
+        if (c === c1 - 1 && lado(b.br)) x.s.border.right = lado(b.br);
       }
-      if (span > 1 || rs > 1) merges.push({ s: { c: c, r: r }, e: { c: c + span - 1, r: r + rs - 1 } });
-      c += span;
-    });
-    if (alto) alturas[r] = alto;
-    r++;
-    return refs;
-  }
-  function salto(n) { return [null, n, { skip: true }]; }
-  function barra(txt, fill) { fila([[txt, NC, { b: true, fill: fill || BAR, blanco: true, al: 'left' }]]); }
-  function seccion(id, extra) {
-    numSec++;
-    var it = instTxt(cfg, p.inst[id]);
-    barra(numSec + '. ' + TITULOS_EVI[id] + (extra ? ' ' + extra : '') + (it ? ' (' + it + ')' : ''));
-  }
-  function partir(total, n) { // reparte "total" columnas en n partes
-    var base = Math.floor(total / n), extra = total - base * n, out = [];
-    for (var i = 0; i < n; i++) out.push(base + (i < extra ? 1 : 0));
-    return out;
-  }
-  function resTxt(ok) { return ok === true ? 'CONFORME' : ok === false ? 'NO CONFORME' : ''; }
-  var H = { b: true }, L = { al: 'left' }, LD = ladosEVI(E), unidV = E.enKV ? 'KV' : 'V', seco = !!E.t.seco;
-
-  // ---- Encabezado ----
-  fila([[tituloProtocolo(p, E), NC, { b: true, sz: 11, fill: CEL }]], 18);
-  for (var ct = 1; ct <= NC; ct++) ws[A(ct, r - 1)].s.border.top = { style: 'medium', color: { rgb: '000000' } };
-  fila([['CLIENTE', 1, { b: true, fill: CEL, blanco: true, al: 'left' }], [p.cab.cliente + (p.cab.proyecto ? ' – ' + p.cab.proyecto : ''), 8, H],
-    ['O.T', 1, { b: true, fill: CEL, blanco: true, al: 'left' }], [p.cab.ot, 2, { b: true, txt: true }]]);
-
-  // ---- Datos técnicos (mismas filas que el PDF) ----
-  barra('DATOS TECNICOS DEL EQUIPO', CEL);
-  var inAT = E.InAT.map(Calc.fmtI).join(' - '), inBT = E.InBT.map(Calc.fmtI).join(' - ');
-  var mt = E.atV.map(function (x) { return E.enKV ? Calc.kv(x) : x; }).join(' - ');
-  var bt = E.btV.filter(OK).map(function (x) { return E.enKV ? Calc.kv(x) : x; }).join(' - ');
-  var grupos = unicos(E.niveles.map(function (n) { return n.g; })).join(' - ');
-  var c1, c2, c3, celTcc = null;
-  if (E.tmm) {
-    var m = t.tmm || {};
-    c1 = [['Marca', p.cab.marca], ['N° de Serie', p.cab.serie], ['Tipo', p.tipo], ['Año', p.cab.anio], ['Norma', p.cab.norma], ['Frecuencia', t.frec + ' Hz']];
-    c2 = [['Relación TT', m.relTT], ['Potencia / clase TT', [m.ttPot, m.ttClase].filter(Boolean).join(' – cl. ')], ['Relación TC', m.relTC], ['Potencia / clase TC', [m.tcPot, m.tcClase].filter(Boolean).join(' – cl. ')], ['Conexión', m.conexion], ['Polaridad', m.polaridad]];
-    c3 = [['Nivel de Aislamiento', t.aisMT, 'KV BIL'], ['Ith', m.ith, 'kA'], ['Idyn', m.idyn, 'kA'], ['Montaje', t.montaje], ['Refrigeración', t.refr], ['Aceite', t.aceite], ['Altitud', t.alt, 'm.s.n.m.'], ['T amb máx.', m.tambMax, '°C'], ['Peso total', t.pesoTotal, 'Kg.']];
-  } else {
-    c1 = [['Marca', p.cab.marca], ['N° de Serie', p.cab.serie], ['Tipo', p.tipo], ['Año', p.cab.anio], ['Norma', p.cab.norma], ['Frecuencia', t.frec + ' Hz'], [seco ? 'Vcc' : 'Tcc', 'TCC']];
-    c2 = [['Potencia', t.potDet || t.pot, t.potDet ? '' : t.potU.toUpperCase()], ['Tensión Nom. ' + LD[0], mt, unidV], ['Tensión Nom. ' + LD[1], bt, unidV], ['Grupo de conexión', grupos]];
-    if (seco) c2 = c2.concat([['Clase de Aislamiento', t.clase], ['Refrigeración', t.refr], ['Montaje', t.montaje]]);
-    else c2 = c2.concat([['Montaje', t.montaje], ['Refrigeración', t.refr], ['Aceite', t.aceite]]);
-    c3 = [['Nivel de Aislamiento ' + LD[0], t.aisMT, 'KV BIL'], ['Nivel de Aislamiento ' + LD[1], t.aisBT, 'KV BIL'], ['Corriente Nominal ' + LD[0], inAT, 'A.'], ['Corriente Nominal ' + LD[1], inBT, 'A.'], ['Altitud', t.alt, 'm.s.n.m.']];
-    if (!seco && t.pesoAceite !== '' && t.pesoAceite !== undefined) c3.push(['Peso aceite', t.pesoAceite, 'Kg.']);
-    if (t.pesoParte !== '' && t.pesoParte !== undefined) c3.push(['Peso parte activa', t.pesoParte, 'Kg.']);
-    c3.push(['Peso total', t.pesoTotal, 'Kg.']);
-    if (seco && t.ip) c3.push(['Grado de Protección', t.ip]);
-  }
-  var nDT = Math.max(c1.length, c2.length, c3.length);
-  for (var i = 0; i < nDT; i++) {
-    var a = c1[i], b = c2[i], c = c3[i], it = [];
-    if (a && a[1] === 'TCC') { celTcc = A(2); it.push([a[0], 1, L], ['', 1, {}], ['%', 1, L]); }
-    else it.push([a ? a[0] : '', 1, L], [a ? a[1] : '', 2, { b: i === 0, txt: true }]);
-    it.push([b ? b[0] : '', 2, L], [b ? b[1] : '', 1, { txt: true }], [b ? b[2] || '' : '', 1, L]);
-    it.push([c ? c[0] : '', 3, L], [c ? c[1] : '', 1, { txt: true }], [c ? c[2] || '' : '', 1, L]);
-    fila(it);
-  }
-  var tccValor = OK(E.vccMedido) ? +E.vccMedido.toFixed(2) : N(t.vccD), tccFormula = null;
-
-  // ---- Pruebas ----
-  if (p.pruebas.ais) {
-    seccion('ais');
-    gruposAis(p.med.ais.rows).forEach(function (rows) {
-      var anchos = partir(9, rows.length);
-      fila([['DENOMINACION', 3]].concat(rows.map(function (x, k) { return [x.lbl + ' (' + Calc.kv(x.v) + 'KV)', anchos[k]]; })));
-      fila([['MEGHADO', 3]].concat([].concat.apply([], rows.map(function (x, k) {
-        var o = ohmPartes(x.val);
-        return [[o[0] === '' ? '' : o[0], anchos[k] - 1, {}], [o[1], 1, L]];
-      }))));
-    });
-  }
-
-  if (p.pruebas.res) {
-    seccion('res');
-    var izq = E.resRows.filter(function (x, k) { return E.tmm ? k < 2 : x.lado === 'AT'; });
-    var der = E.resRows.filter(function (x, k) { return E.tmm ? k >= 2 : x.lado !== 'AT'; });
-    var uA = (izq[0] || {}).u || 'Ω', uB = (der[0] || {}).u || 'mΩ';
-    var tA = E.tmm ? 'RESISTENCIA TT (' + uA + ')' : seco ? 'RESISTENCIA BOBINA ' + (E.auto ? 'DE ENTRADA' : 'PRIMARIA') + ' (' + uA + ')' : 'RESISTENCIA  M.T. (' + uA + ')';
-    var tB = E.tmm ? 'RESISTENCIA TC' : seco ? 'RESISTENCIA BOBINA ' + (E.auto ? 'DE SALIDA' : 'SECUNDARIA') + ' (' + uB + ')' : 'RESISTENCIA  B.T. (' + uB + ')';
-    fila([[tA, 6, H], [tB, 6, H]]);
-    var nF = 2 * Math.max(izq.length, der.length, 1), r0 = r;
-    var lado = function (lista, c0) {
-      lista.forEach(function (x, k) {
-        var ultimo = k === lista.length - 1, rIni = r0 + 2 * k, alto = ultimo ? nF - 2 * k : 2;
-        var cols = partir(5, x.cols.length).reverse(), cc = c0 + 1;
-        var et = E.tmm ? x.lbl : (x.v >= 1000 ? Calc.kv(x.v) + ' KV' : x.v + ' V');
-        r = rIni; celda(c0, et, H);
-        if (alto > 1) merges.push({ s: { c: c0, r: rIni }, e: { c: c0, r: rIni + alto - 1 } });
-        for (var q = 1; q < alto; q++) ws[A(c0, rIni + q)] = { t: 's', v: '', s: estilo(H, c0) };
-        x.cols.forEach(function (col, j) {
-          var w = cols[j];
-          r = rIni; celda(cc, col.replace('-', ' - '), {});
-          r = rIni + 1; celda(cc, N(x.vals[j]), { z: zD(x.vals[j]) });
-          for (var kk = 0; kk < w; kk++) for (var q2 = 0; q2 < alto; q2++) { var ad = A(cc + kk, rIni + q2); if (!ws[ad]) ws[ad] = { t: 's', v: '', s: estilo({}, cc + kk) }; }
-          if (w > 1) merges.push({ s: { c: cc, r: rIni }, e: { c: cc + w - 1, r: rIni } });
-          if (w > 1 || alto > 2) merges.push({ s: { c: cc, r: rIni + 1 }, e: { c: cc + w - 1, r: rIni + alto - 1 } });
-          cc += w;
-        });
+      var dir = A(C0 + c0, R0 + r0), x0 = ws[dir];
+      if (b.num !== undefined) { x0.t = 'n'; x0.v = b.num; if (b.z) x0.z = b.z; }
+      else { x0.t = 's'; x0.v = b.txt; }
+      if (c1 - c0 > 1 || r1 - r0 > 1) merges.push({ s: { c: C0 + c0, r: R0 + r0 }, e: { c: C0 + c1 - 1, r: R0 + r1 - 1 } });
+      if (b.key) claves[b.key] = dir;
+      if (b.f) conF.push({ a: dir, f: b.f });
+      b.img.forEach(function (im) {
+        var cc = piso(colX, im.x), rr = piso(filY, im.y);
+        imgs.push({ src: im.src, col: C0 + cc, row: R0 + rr, colOffPx: (im.x - colX[cc]) * K, rowOffPx: (im.y - filY[rr]) * K, wPx: im.w * K, hPx: im.h * K });
       });
-    };
-    lado(izq, 1); lado(der, 7);
-    r = r0 + nF;
-  }
-
-  if (p.pruebas.rel) {
-    seccion('rel');
-    E.rels.forEach(function (nv) {
-      var nb = nv.bornes.length, mono = nb === 1;
-      var wb = mono ? [2] : partir(5, nb).reverse();
-      var cab1 = [['Posición', 1, { b: true, rs: 2 }], ['TENSIONES COMPARADAS', 4, H], ['Relación Teórica', 1, { b: true, rs: 2, wrap: true }]];
-      var cab2 = [salto(1), ['V1', 2, H], ['V2', 2, H], salto(1)];
-      nv.bornes.forEach(function (bb, k) { cab1.push([bb[0].replace('-', ' - '), wb[k], H]); cab2.push([bb[1].replace('-', ' - '), wb[k], H]); });
-      if (mono) { cab1.push(['% Error', 2, H], ['RESULTADO', 2, { b: true, rs: 2 }]); cab2.push(['≤ 0.5%', 2, H], salto(2)); }
-      else { cab1.push(['% Error', 1, H]); cab2.push(['≤ 0.5%', 1, H]); }
-      fila(cab1); fila(cab2);
-      var iNom = nv.n, rNom = r + iNom; // fila de la posición nominal
-      nv.filas.forEach(function (f) {
-        var nom = f.ti === iNom, ov = ((p.med.rel[nv.i] || {}).ov || {})[f.ti];
-        var refC = abs(A(2, rNom)), refE = abs(A(4, rNom));
-        var fac = +(1 + (iNom - f.ti) * N(nv.pct) / 100).toFixed(6);
-        var v1 = nom || OK(N(ov)) ? f.vat : { f: refC + '*' + fac, v: f.vat };
-        var v2 = nom ? nv.vbt : { f: refE, v: nv.vbt };
-        var c0 = A(2), e0 = A(4);
-        var teo = OK(nv.dis) ? { f: nv.dis + '*' + c0 + '/' + nv.v, v: f.teo } : { f: Calc.relFormula(c0, e0, nv.g, E.auto, E.s3), v: f.teo };
-        var it = [[String(f.label), 1, { b: nom, txt: true }], [v1, 2, { b: nom, z: '0' }], [v2, 2, { b: nom, z: '0' }], [teo, 1, { b: true, z: '0.000' }]];
-        nv.bornes.forEach(function (bb, j) { it.push([N(f.lect[j]), wb[j], { b: nom, z: '0.000' }]); });
-        var cUlt = 6 + wb.reduce(function (s, x) { return s + x; }, 0);
-        var err = { f: IFE('ABS(' + A(6) + '-AVERAGE(' + A(7) + ':' + A(cUlt) + '))/' + A(6)), v: OK(f.err) ? f.err / 100 : '' };
-        if (mono) {
-          it.push([err, 2, { b: nom, z: '0.00%' }]);
-          var ae = A(cUlt + 1);
-          it.push([{ f: 'IF(' + ae + '="","",IF(' + ae + '<=0.005,"CONFORME","NO CONFORME"))', v: resTxt(f.ok) }, 2, { b: nom }]);
-        } else it.push([err, 1, { b: nom, z: '0.00%' }]);
-        fila(it);
-      });
+      if (b.sec === 'cc') h.filaCC = R0 + r0;
     });
-  }
-
-  if (p.pruebas.vac) {
-    seccion('vac');
-    var vac = p.med.vac, vtxt = Calc.fmtV(E.vac.V).replace(/\s/g, '') + (E.vac.Vat ? ' / ' + Math.round(E.vac.Vat) : '');
-    if (E.mono) {
-      fila([['TENSION (' + (t.bornes === 'P' ? 'S1 - S2' : 'X1 - X2') + ')', 3, H], ['INTENSIDAD', 3, H], ['VATIMETRO', 3, H], ['PERDIDA DE NUCLEO', 3, H]]);
-      fila([['Lectura', 2], ['Unidad', 1], ['Lectura', 2], ['Unidad', 1], ['W', 3], ['Wr', 3]]);
-      fila([[vtxt, 2, { txt: true }], ['V', 1], [N(vac.I[0]), 2, { z: zD(vac.I[0]) }], ['A', 1], [N(vac.W[0]), 3, { z: zD(vac.W[0]) }], [{ f: 'IF(' + A(7) + '="","",' + A(7) + ')', v: E.vac.P0 }, 3, { b: true, z: zD(E.vac.P0) }]]);
-    } else {
-      var etI = t.bornes === 'H' ? ['INTENSIDAD (H1)', 'INTENSIDAD (H2)', 'INTENSIDAD (H3)'] : ['INTENSIDAD (Iu)', 'INTENSIDAD (Iv)', 'INTENSIDAD (Iw)'];
-      fila([['TENSION', 2, H]].concat(etI.map(function (x) { return [x, 2, H]; })).concat([['WATIMETROS', 3, H], ['PERDIDA NÚCLEO', 1, { b: true, wrap: true }]]), 24);
-      fila([['Lectura', 2], ['Lectura', 2], ['Lectura', 2], ['Lectura', 2], ['W1', 1], ['W2', 1], ['W3', 1], ['Wr', 1]]);
-      var it3 = [[vtxt, 1, { txt: true }], ['V', 1]];
-      for (var q = 0; q < 3; q++) it3.push([N(vac.I[q]), 1, { z: zD(vac.I[q]) }], ['A', 1]);
-      for (var w = 0; w < 3; w++) it3.push([N(vac.W[w]), 1, { z: zD(vac.W[w]) }]);
-      it3.push([{ f: 'IF(COUNT(' + A(9) + ':' + A(11) + ')=0,"",SUM(' + A(9) + ':' + A(11) + '))', v: E.vac.P0 }, 1, { b: true, z: zD(E.vac.P0) }]);
-      fila(it3);
-    }
-  }
-
-  if (p.pruebas.cc) {
-    seccion('cc');
-    var iec = p.opt.modoCorr === 'iec', tref = OK(E.tref) ? E.tref : 75;
-    var ta = E.cc.length && OK(N(E.cc[0].row.tamb)) ? N(E.cc[0].row.tamb) : 25;
-    var nWc = E.fases === 1 ? 1 : 3;
-    var rCab = r;
-    var variosW = E.cc.some(function (cc) { return (cc.row.W || []).slice(1, nWc).some(function (x) { return String(x).trim() !== ''; }); });
-    fila([['Posición', 1, { b: true, rs: 3 }], ['INTENSIDAD', 2, H], ['TENSION', 2, H], ['VATIMETROS', 3, H], ['PERDIDAS EN LOS DEVANADOS', 2, { b: true, rs: 2, wrap: true }], ['TENSION DE CORTO CIRCUITO', 2, { b: true, rs: 2, wrap: true }]]);
-    fila([salto(1), ['Lectura', 2, { rs: 2 }], ['Lectura', 2, { rs: 2 }]].concat(variosW ? [['W1', 1, { rs: 2 }], ['W2', 1, { rs: 2 }], ['W3', 1, { rs: 2 }]] : [['Wt', 3, { rs: 2 }]]).concat([salto(4)]));
-    fila([salto(8), ['a ' + ta + ' º C', 1], ['a ' + tref + ' º C', 1], ['a ' + ta + ' º C', 1], ['a ' + tref + ' º C', 1]]);
-    E.cc.forEach(function (cc, k) {
-      var it = [[+(+cc.vtap).toFixed(2), 1, { z: E.btV.length > 1 ? '0" / ' + cc.vbt + '"' : '0' }], [N(cc.row.I), 1, { z: zD(cc.row.I) }], ['A', 1], [N(cc.row.V), 1, { z: zD(cc.row.V) }], ['V', 1]];
-      if (variosW) for (var j = 0; j < 3; j++) it.push([N((cc.row.W || [])[j]), 1, { z: zD((cc.row.W || [])[j]) }]);
-      else it.push([N((cc.row.W || [])[0]), 3, { z: zD((cc.row.W || [])[0]) }]);
-      // si no se inyectó la corriente nominal, se refiere a In (igual que la vista previa)
-      var esc2 = OK(cc.factor) && cc.factor !== 1 ? '*(' + (+cc.In.toFixed(4)) + '/' + A(2) + ')' : '';
-      var sumW = variosW ? 'SUM(' + A(6) + ':' + A(8) + ')' : A(6), hayW = variosW ? 'COUNT(' + A(6) + ':' + A(8) + ')=0' : A(6) + '=""';
-      it.push([{ f: 'IF(' + hayW + ',"",' + IFE(sumW + (esc2 ? esc2 + '^2' : '')) + ')', v: cc.PIn }, 1, { z: zD(cc.PIn) }]);
-      it.push([iec ? cc.Pref : { f: IFE(A(9) + '*1.05'), v: cc.Pref }, 1, { z: zD(cc.Pref) }]);
-      it.push([{ f: 'IF(' + A(4) + '="","",' + IFE('(' + A(4) + esc2 + '/' + A(1) + ')*100') + ')', v: cc.Vcc }, 1, { z: zD(cc.Vcc) }]);
-      it.push([iec ? cc.Vccref : { f: IFE(A(11) + '*1.05'), v: cc.Vccref }, 1, { z: zD(cc.Vccref) }]);
-      if (k === 0) tccFormula = A(12);
-      fila(it);
-    });
-    // No se llegó al 100 % de In: explicación al lado del cuadro (fuera del área de impresión)
-    var parciales = E.cc.filter(function (cc) { return OK(cc.factor) && cc.factor !== 1; });
-    if (parciales.length) {
-      var notas = [['NOTA: en la prueba de cortocircuito no se llegó al 100 % de la corriente nominal (In).', true],
-        ['Se escriben las lecturas reales y se llevan al 100 % de In: la tensión crece en proporción a la corriente y las pérdidas con su cuadrado.']];
-      parciales.forEach(function (cc) {
-        notas.push(['']);
-        notas.push(['Posición ' + Math.round(cc.vtap) + (E.btV.length > 1 ? ' / ' + cc.vbt : '') + ' V (Vn = ' + (+(+cc.vtap).toFixed(2)) + ' V, S = ' + Math.round(E.S) + ' VA):', true]);
-        pasosCC(cc, E, p).forEach(function (l) { notas.push(['   ' + l]); });
-      });
-      notas.push(['']);
-      notas.push(['En el PDF el cuadro se muestra directamente con los valores al 100 % (I = In, V100 y P100).']);
-      notas.forEach(function (n, k) {
-        if (n[0] === '') return;
-        ws[A(NC + 2, rCab + k)] = { t: 's', v: n[0], s: { font: { name: 'Arial', sz: 9, bold: !!n[1], color: { rgb: n[1] ? 'C00000' : '000000' } }, alignment: { horizontal: 'left', vertical: 'center' } } };
-      });
-      colNotas = NC + 14;
-      if (rCab + notas.length > r) filaNotas = rCab + notas.length;
-    }
-    if (iec) fila([['Corrección a ' + tref + ' °C según IEC 60076-1 (k = ' + E.k + '): P(Tref) = PI²R·(k+Tref)/(k+Tamb) + Pad·(k+Tamb)/(k+Tref)', NC, L]]);
-  }
-
-  if (p.pruebas.apl) {
-    seccion('apl', '(1 minuto - 60 Hz)');
-    fila([['', 2], ['TENSION', 2, H], ['INTENSIDAD', 2, H], ['TIEMPO', 2, H], ['RESULTADO', 4, H]]);
-    E.apl.forEach(function (x) {
-      fila([[x.lbl, 2, { txt: true }], [OK(x.kV) ? x.kV : '', 1, { al: 'right' }], ['KV.', 1, L], [N(x.mA), 1, { al: 'right', z: zD(x.mA) }], ['mA', 1, L],
-        [N(x.t), 1, { al: 'right' }], ['seg.', 1, L], [x.res || '', 4]]);
-    });
-  }
-  if (p.pruebas.ind) {
-    var I = E.ind, iTxt = String(I.I || '').trim().replace(',', '.');
-    seccion('ind', '(1 minuto - ' + I.f + ' Hz)');
-    fila([['Posición', 2, H], ['TENSIÓN', 3, H], ['INTENSIDAD', 2, H], ['TIEMPO', 1, H], ['RESULTADO', 4, H]]);
-    fila([[(E.btV[0] || '') + ' V', 2, { b: true, txt: true }], [OK(I.V) ? Math.round(I.V) + ' V' : '', 3, { txt: true }], [iTxt ? iTxt + ' A' : '', 2, { txt: true }], [I.t + ' seg.', 1, { txt: true }], [I.res || '', 4]]);
-  }
-  if (p.pruebas.ace) {
-    var ac = p.med.ace, wl = partir(6, ac.lect.length);
-    seccion('ace', '(' + ac.norma + ')');
-    fila([['T amb (°C)', 1, { b: true, wrap: true }], ['Aceite', 1, H]].concat(ac.lect.map(function (x, k) { return [(k + 1) + ' (kV)', wl[k], H]; })).concat([['Promedio (kV)', 1, { b: true, wrap: true }], ['Mínimo (kV)', 1, { b: true, wrap: true }], ['RESULTADO', 2, H]]), 24);
-    var itA = [[N(ac.tamb), 1], [ac.tipo || t.aceite, 1]];
-    ac.lect.forEach(function (x, k) { itA.push([N(x), wl[k], { z: zD(x) }]); });
-    var cP = 9;
-    itA.push([{ f: IFE('AVERAGE(' + A(3) + ':' + A(8) + ')'), v: E.ace.prom }, 1, { b: true, z: zD(E.ace.prom) }], [N(ac.min), 1],
-      [{ f: 'IF(' + A(cP) + '="","",IF(' + A(cP) + '>=' + A(cP + 1) + ',"CONFORME","NO CONFORME"))', v: resTxt(E.ace.ok) }, 2]);
-    fila(itA);
-  }
-  if (p.pruebas.rui) {
-    seccion('rui');
-    fila([['Nivel de ruido', 5, H], [N(p.med.rui.db), 3], ['dB', 4, L]]);
-  }
-  if (p.pruebas.pre && E.pre) {
-    var tm = t.tmm || {};
-    seccion('pre', '(IEC 61869)');
-    fila([['TRANSFORMADOR DE TENSIÓN – CLASE ' + tm.ttClase + ' (límites ±' + E.pre.limTT[0] + ' % y ±' + E.pre.limTT[1] + '′) – ' + (tm.ttPot || ''), NC, { b: true, al: 'left' }]]);
-    fila([['Bornes', 1, { b: true, rs: 2 }], ['Carga', 2, { b: true, rs: 2 }]].concat([80, 100, 120].map(function (x) { return [x + ' % Un', 2, H]; })).concat([['RESULTADO', 3, { b: true, rs: 2 }]]));
-    fila([salto(3)].concat([].concat.apply([], [80, 100, 120].map(function () { return [['ε (%)', 1], ['δ (′)', 1]]; }))).concat([salto(3)]));
-    E.pre.tt.forEach(function (x) {
-      var it = [[x.par, 1, { txt: true }], [x.carga, 2, { txt: true, wrap: true }]];
-      [80, 100, 120].forEach(function (pc) { var v = x.ptos[pc] || []; it.push([N(v[0]), 1], [N(v[1]), 1]); });
-      it.push([resTxt(x.ok), 3]); fila(it, 24);
-    });
-    fila([['TRANSFORMADOR DE CORRIENTE – CLASE ' + tm.tcClase + ' – ' + (tm.tcPot || ''), NC, { b: true, al: 'left' }]]);
-    fila([['Fase / Carga', 1, { b: true, rs: 2, wrap: true }]].concat([1, 5, 20, 100, 120].map(function (x) {
-      var lim = Calc.limTC(tm.tcClase, x);
-      return [x + ' % In' + (lim ? ' (±' + lim[0] + ' % / ±' + lim[1] + '′)' : ''), 2, { b: true, wrap: true }];
-    })).concat([['RESULTADO', 1, { b: true, rs: 2, wrap: true }]]), 24);
-    fila([salto(1)].concat([].concat.apply([], [1, 5, 20, 100, 120].map(function () { return [['ε (%)', 1], ['δ (′)', 1]]; }))).concat([salto(1)]));
-    E.pre.tc.forEach(function (x) {
-      var it = [[x.fase + ' – ' + x.carga, 1, { txt: true, wrap: true }]];
-      [1, 5, 20, 100, 120].forEach(function (pc) {
-        if (!Calc.limTC(tm.tcClase, pc)) { it.push(['–', 1], ['–', 1]); return; }
-        var v = x.ptos[pc] || []; it.push([N(v[0]), 1], [N(v[1]), 1]);
-      });
-      it.push([resTxt(x.ok), 1, { wrap: true }]); fila(it, 24);
-    });
-  }
-
-  // ---- Observaciones y firmas ----
-  barra('OBSERVACIONES');
-  var obs = String(p.obsManual ? p.obs : obsAuto(p, E)).split('\n');
-  while (obs.length < 2) obs.push('');
-  obs.forEach(function (l) { fila([[l, NC, { b: true, al: 'left', txt: true }]]); });
-  var fs = p.firmas.slice(0, 4), wF = partir(NC, fs.length);
-  function emp(x) { return x.empresa || (/cliente/i.test(x.rol) ? p.cab.cliente : ''); }
-  fila([].concat.apply([], fs.map(function (x, k) { return [[x.rol + ':', 1, L], [emp(x), wF[k] - 1, { b: true, al: 'left' }]]; })));
-  fila(fs.map(function (x, k) { return [x.nombre, wF[k], L]; }));
-  fila([].concat.apply([], fs.map(function (x, k) { return [['Fecha :', 1, L], [fechaTxt(x.fecha || p.cab.fecha), wF[k] - 1, { al: 'left', txt: true }]]; })));
-  var rFirma = r, imgs = [], anchoCol = [5.6, 13.3, 10.1, 13.7, 7.1, 15.6, 16.6, 10.3, 15.9, 10.9, 7.7, 13.9, 15.3];
-  fs.forEach(function (x, k) {
-    var src = firmaImg(p, cfg, x); if (!src) return;
-    var c0 = 1 + wF.slice(0, k).reduce(function (s, y) { return s + y; }, 0);
-    var px = 0; for (var q = c0; q < c0 + wF[k]; q++) px += anchoCol[q] * 7 + 5;
-    imgs.push({ src: src, col: c0, row: rFirma, anchoPx: px, altoPx: 6 * 20 });
+    // Marco exterior grueso como en el PDF
+    for (var r = 0; r < nF; r++) { cel(C0, R0 + r).s.border.left = lado(1, 1); cel(C0 + NCOL - 1, R0 + r).s.border.right = lado(1, 1); }
+    for (var c = 0; c < NCOL; c++) { cel(C0 + c, R0).s.border.top = lado(1, 1); cel(C0 + c, R0 + nF - 1).s.border.bottom = lado(1, 1); }
+    if (h.filaCC !== undefined) notasCC(h.filaCC);
+    R0 += nF;
+    if (ih < hojas.length - 1) { saltos.push(R0); filasPx[R0] = 6; R0 += 1; }
   });
-  fila(fs.map(function (x, k) { return ['Firma :', wF[k], { al: 'left', rs: 6 }]; }));
-  r += 5;
-  for (var cb = 1; cb <= NC; cb++) { var ab = A(cb, r - 1); if (ws[ab] && ws[ab].s) ws[ab].s.border.bottom = { style: 'medium', color: { rgb: '000000' } }; }
-  for (var vv = 0; vv < 6; vv++) fs.forEach(function (x, k) { var cv = 1 + wF.slice(0, k).reduce(function (s, y) { return s + y; }, 0), av = A(cv, r - 6 + vv); if (ws[av]) ws[av].s.alignment.vertical = 'top'; });
 
-  // Tcc de datos técnicos enlazado a la Vcc a Tref de la prueba de cortocircuito (como en tus Excel: =M46)
-  if (celTcc) {
-    var dc = XLSX.utils.decode_cell(celTcc), cellT;
-    if (tccFormula) { cellT = { t: 'n', f: tccFormula }; if (OK(tccValor)) cellT.v = tccValor; }
-    else cellT = OK(tccValor) ? { t: 'n', v: tccValor } : { t: 's', v: '' };
-    cellT.s = estilo({}, dc.c); cellT.z = '0.0'; ws[celTcc] = cellT;
+  // Fórmulas: {nombre} → dirección de la celda
+  conF.forEach(function (o) {
+    var falta = false, f = o.f.replace(/\{([\w]+)\}/g, function (m, k) { if (!claves[k]) falta = true; return claves[k] || 'A1'; });
+    if (falta) return;
+    var x = ws[o.a]; x.f = f;
+    if (x.v === '' || x.v === undefined) { delete x.v; x.t = 'n'; }
+    else if (!/CONFORME/.test(x.v)) x.t = 'n';
+  });
+
+  // Cortocircuito sin llegar al 100 % de In: explicación al lado del cuadro (fuera del área de impresión)
+  function notasCC(fila) {
+    var parciales = E.cc.filter(function (c) { return OK(c.factor) && c.factor !== 1; });
+    if (!parciales.length) return;
+    var notas = [['NOTA: en la prueba de cortocircuito no se llegó al 100 % de la corriente nominal (In).', true],
+      ['El cuadro tiene las lecturas reales; las fórmulas las llevan al 100 % de In: la tensión crece en proporción a la corriente y las pérdidas con su cuadrado.']];
+    parciales.forEach(function (c) {
+      notas.push(['']);
+      notas.push(['Posición ' + Math.round(c.vtap) + (E.btV.length > 1 ? ' / ' + c.vbt : '') + ' V (Vn = ' + (+(+c.vtap).toFixed(2)) + ' V, S = ' + Math.round(E.S) + ' VA):', true]);
+      pasosCC(c, E, p).forEach(function (l) { notas.push(['   ' + l]); });
+    });
+    notas.push(['']);
+    notas.push(['En el PDF el cuadro se muestra directamente con los valores al 100 % (I = In, V100 y P100).']);
+    // sin cambiar el alto de las filas del protocolo: se saltan las filas muy bajas (separaciones)
+    var f = fila;
+    notas.forEach(function (n) {
+      while (filasPx[f] !== undefined && filasPx[f] < 9) f++;
+      if (filasPx[f] === undefined) filasPx[f] = 12;
+      if (n[0] !== '') ws[A(C0 + NCOL + 1, f)] = { t: 's', v: n[0], s: { font: { name: 'Arial', sz: 9, bold: !!n[1], color: { rgb: n[1] ? 'C00000' : '000000' } }, alignment: { horizontal: 'left', vertical: 'center' } } };
+      f++;
+    });
+    hayNotas = Math.max(hayNotas, f);
   }
 
-  ws['!ref'] = XLSX.utils.encode_range({ s: { c: 0, r: 0 }, e: { c: colNotas, r: Math.max(r, filaNotas) } });
+  var ultFila = R0 - 1, ultCol = C0 + NCOL - 1;
+  ws['!ref'] = XLSX.utils.encode_range({ s: { c: 0, r: 0 }, e: { c: ultCol + (hayNotas ? 14 : 0), r: Math.max(ultFila, hayNotas) } });
   ws['!merges'] = merges;
-  ws['!cols'] = anchoCol.map(function (w) { return { wch: w }; });
-  ws['!rows'] = []; for (var rr = 0; rr <= r; rr++) ws['!rows'].push({ hpt: alturas[rr] || 15 });
-  ws['!margins'] = { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 };
+  ws['!cols'] = [{ wpx: 8 }];
+  for (var j = 0; j < NCOL; j++) ws['!cols'].push({ wpx: Math.max(2, Math.round((colX[j + 1] - colX[j]) * K)) });
+  ws['!rows'] = [];
+  for (var rr = 0; rr <= Math.max(ultFila, hayNotas); rr++) ws['!rows'].push({ hpt: Math.max(1, +((filasPx[rr] || 12) * K * 0.75).toFixed(2)) });
+  ws['!margins'] = { left: 0.3, right: 0.3, top: 0.4, bottom: 0.4, header: 0.2, footer: 0.2 };
   var wbk = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wbk, ws, 'PROTOCOLO');
-  wbk.Workbook = { Names: [{ Name: '_xlnm.Print_Area', Sheet: 0, Ref: "'PROTOCOLO'!$B$3:$M$" + r }] };
-  var datos = ajustarPagina(XLSX.write(wbk, { bookType: 'xlsx', type: 'array' }), imgs);
+  wbk.Workbook = { Names: [{ Name: '_xlnm.Print_Area', Sheet: 0, Ref: "'PROTOCOLO'!$" + XLSX.utils.encode_col(C0) + '$2:$' + XLSX.utils.encode_col(ultCol) + '$' + (ultFila + 1) }] };
+  var vert = !!p.opt.membrete || p.opt.orient === 'portrait';
+  var datos = ajustarPagina(XLSX.write(wbk, { bookType: 'xlsx', type: 'array' }), imgs, { orient: vert ? 'portrait' : 'landscape', paginas: hojas.length > 1 ? 0 : 1, saltos: saltos });
   descargar(nombreArchivo(p) + '.xlsx', new Blob([datos], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+
+  // ---- Medición del HTML ----
+  function medirMarco(marco) {
+    var m = marco.getBoundingClientRect(), cajas = [];
+    Array.prototype.forEach.call(marco.querySelectorAll('td, .bar, .sub, .nota'), function (el) {
+      var r = el.getBoundingClientRect(); if (r.width < 1 || r.height < 1) return;
+      var cs = getComputedStyle(el), esDiv = el.tagName !== 'TD';
+      var b = { x0: r.left - m.left, x1: r.right - m.left, y0: r.top - m.top, y1: r.bottom - m.top, img: [] };
+      function bw(l) { return cs['border' + l + 'Style'] === 'none' ? 0 : parseFloat(cs['border' + l + 'Width']) || 0; }
+      b.bt = bw('Top'); b.bb = bw('Bottom'); b.bl = bw('Left'); b.br = bw('Right');
+      var fs = parseFloat(cs.fontSize) || 9;
+      b.font = { name: 'Arial', sz: Math.round(fs * 0.75 * KF * 2) / 2, bold: (parseInt(cs.fontWeight, 10) || 400) >= 600, color: { rgb: hex(cs.color) || '000000' } };
+      if (!el.classList.contains('miss')) b.fill = hex(cs.backgroundColor);
+      var ta = cs.textAlign, txt;
+      if (el.classList.contains('titulo')) {
+        var cl = el.cloneNode(true), pg = cl.querySelector('.pag'), pt = pg ? pg.textContent : '';
+        if (pg) pg.parentNode.removeChild(pg);
+        txt = cl.textContent.trim() + (pt ? '   (' + pt + ')' : '');
+      } else txt = (el.innerText || el.textContent || '').replace(/ /g, ' ').replace(/\s+$/, '').replace(/^\s+/, '');
+      if (el.classList.contains('miss')) txt = '';
+      var envuelto = /\n/.test(txt) || lineas(el) > 1;
+      b.al = { horizontal: esDiv || ta === 'left' || ta === 'start' ? 'left' : ta === 'right' || ta === 'end' ? 'right' : 'center',
+        vertical: el.classList.contains('f-celda') ? 'top' : 'center', wrapText: envuelto };
+      if (el.classList.contains('f-celda')) b.al.horizontal = 'left';
+      var d = el.dataset || {};
+      if (d.x) b.key = d.x;
+      if (d.f) b.f = d.f;
+      var enSec = !!el.closest('.sec');
+      if (d.n !== undefined && OK(+d.n)) { b.num = +d.n; b.z = d.z; }
+      else if (txt !== '' && (enSec || d.f)) {
+        var t = txt.trim(), mm;
+        if (/^-?\d+(\.\d+)?$/.test(t) && !/^-?0\d/.test(t) && t.replace(/\D/g, '').length <= 12) { b.num = +t; b.z = d.z || zDec(t); }
+        else if ((!d.z || /%$/.test(d.z)) && (mm = t.match(/^(-?\d+(?:\.\d+)?)\s?%$/))) { b.num = +mm[1] / 100; b.z = d.z || (zDec(mm[1]) === '0' ? '0%' : zDec(mm[1]) + '%'); }
+      }
+      if (b.num === undefined) b.txt = txt;
+      if (el.tagName === 'TABLE' || (el.closest('table') && el.closest('table').dataset.sec === 'cc' && el.parentNode.rowIndex === 0 && el.cellIndex === 0)) b.sec = 'cc';
+      Array.prototype.forEach.call(el.querySelectorAll('img'), function (im) {
+        var q = im.getBoundingClientRect(); if (q.width < 2) return;
+        var src = im.getAttribute('src'), orig = Object.keys(IMG_CACHE).filter(function (k) { return IMG_CACHE[k] === src; })[0];
+        b.img.push({ src: orig || src, x: q.left - m.left, y: q.top - m.top, w: q.width, h: q.height });
+      });
+      cajas.push(b);
+    });
+    return { cajas: cajas };
+  }
+  function lineas(el) {
+    try {
+      var rg = document.createRange(); rg.selectNodeContents(el);
+      var tops = {}; Array.prototype.forEach.call(rg.getClientRects(), function (q) { if (q.width > 0.5) tops[Math.round(q.top / 3)] = 1; });
+      return Object.keys(tops).length;
+    } catch (e) { return 1; }
+  }
+  function zDec(t) { var k = (String(t).split('.')[1] || '').length; return k ? '0.' + Array(k + 1).join('0') : '0'; }
+  function hex(c) {
+    var q = String(c || '').match(/rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)(?:,\s*([\d.]+))?\)/); if (!q) return null;
+    if (q[4] !== undefined && +q[4] < 0.05) return null;
+    return [q[1], q[2], q[3]].map(function (x) { return ('0' + (+x).toString(16).toUpperCase()).slice(-2); }).join('');
+  }
+  function agrupar(vals, tol) {
+    vals = vals.slice().sort(function (a, b) { return a - b; });
+    var g = [], ini = null, suma = 0, n = 0;
+    vals.forEach(function (v) {
+      if (ini === null || v - ini > tol) { if (n) g.push(suma / n); ini = v; suma = 0; n = 0; }
+      suma += v; n++;
+    });
+    if (n) g.push(suma / n);
+    return g;
+  }
 }
 
 // Datos de una imagen data: URL → {bytes, ext, w, h}
@@ -2127,7 +1972,8 @@ function imgDatos(src) {
 }
 
 // A4 vertical ajustado a 1 página de ancho + firmas escaneadas (SheetJS no escribe esto por sí solo)
-function ajustarPagina(datos, imgs) {
+function ajustarPagina(datos, imgs, conf) {
+  conf = conf || {};
   try {
     var zip = XLSX.CFB.read(new Uint8Array(datos), { type: 'array' }), enc = new TextEncoder(), dec = new TextDecoder();
     function leer(ruta) { var e = XLSX.CFB.find(zip, '/' + ruta) || XLSX.CFB.find(zip, ruta); return e ? dec.decode(e.content) : null; }
@@ -2137,7 +1983,7 @@ function ajustarPagina(datos, imgs) {
     if (/<sheetPr[\s>\/]/.test(xml)) xml = xml.replace(/<sheetPr([^>]*)\/>/, '<sheetPr$1><pageSetUpPr fitToPage="1"/></sheetPr>');
     else xml = xml.replace(/(<worksheet[^>]*>)/, '$1<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>');
     xml = xml.replace(/<printOptions[^>]*\/>/, '');
-    xml = xml.replace(/<pageMargins([^>]*)\/>/, '<printOptions horizontalCentered="1"/><pageMargins$1/><pageSetup paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="0"/>');
+    xml = xml.replace(/<pageMargins([^>]*)\/>/, '<printOptions horizontalCentered="1"/><pageMargins$1/><pageSetup paperSize="9" orientation="' + (conf.orient || 'portrait') + '" fitToWidth="1" fitToHeight="' + (conf.paginas || 0) + '"/>');
     var lista = (imgs || []).map(function (x) { var d = imgDatos(x.src); if (d) d.pos = x; return d; }).filter(Boolean);
     if (lista.length) {
       var EMU = 9525, anc = '', rels = '', exts = {};
@@ -2145,9 +1991,13 @@ function ajustarPagina(datos, imgs) {
         var n = i + 1, nombre = 'firma' + n + '.' + d.ext;
         exts[d.ext] = 1;
         XLSX.CFB.utils.cfb_add(zip, 'xl/media/' + nombre, d.bytes);
-        var esc = Math.min((d.pos.anchoPx - 16) / d.w, (d.pos.altoPx - 22) / d.h, 1.2);
-        var w = Math.round(d.w * esc), h = Math.round(d.h * esc), off = Math.max(0, Math.round((d.pos.anchoPx - w) / 2));
-        anc += '<xdr:oneCellAnchor><xdr:from><xdr:col>' + d.pos.col + '</xdr:col><xdr:colOff>' + off * EMU + '</xdr:colOff><xdr:row>' + d.pos.row + '</xdr:row><xdr:rowOff>' + 18 * EMU + '</xdr:rowOff></xdr:from>' +
+        var w, h, off, offY;
+        if (d.pos.wPx) { w = Math.round(d.pos.wPx); h = Math.round(d.pos.hPx); off = Math.round(d.pos.colOffPx); offY = Math.round(d.pos.rowOffPx); }
+        else {
+          var esc = Math.min((d.pos.anchoPx - 16) / d.w, (d.pos.altoPx - 22) / d.h, 1.2);
+          w = Math.round(d.w * esc); h = Math.round(d.h * esc); off = Math.max(0, Math.round((d.pos.anchoPx - w) / 2)); offY = 18;
+        }
+        anc += '<xdr:oneCellAnchor><xdr:from><xdr:col>' + d.pos.col + '</xdr:col><xdr:colOff>' + off * EMU + '</xdr:colOff><xdr:row>' + d.pos.row + '</xdr:row><xdr:rowOff>' + offY * EMU + '</xdr:rowOff></xdr:from>' +
           '<xdr:ext cx="' + w * EMU + '" cy="' + h * EMU + '"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="' + (n + 1) + '" name="Firma ' + n + '"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr>' +
           '<xdr:blipFill><a:blip r:embed="rIdF' + n + '"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' + w * EMU + '" cy="' + h * EMU + '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>';
         rels += '<Relationship Id="rIdF' + n + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/' + nombre + '"/>';
@@ -2166,6 +2016,9 @@ function ajustarPagina(datos, imgs) {
       ct = ct.replace('</Types>', '<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>');
       escribir('[Content_Types].xml', ct);
     }
+    // Salto de página entre hojas del protocolo (va después de pageSetup y antes de ignoredErrors/drawing)
+    if (conf.saltos && conf.saltos.length) xml = xml.replace(/(<pageSetup[^>]*\/>)/, '$1<rowBreaks count="' + conf.saltos.length + '" manualBreakCount="' + conf.saltos.length + '">' +
+      conf.saltos.map(function (r) { return '<brk id="' + r + '" max="16383" man="1"/>'; }).join('') + '</rowBreaks>');
     escribir('xl/worksheets/sheet1.xml', xml);
     return XLSX.CFB.write(zip, { fileType: 'zip', type: 'array' });
   } catch (err) { console.warn('ajustarPagina', err); return datos; }
