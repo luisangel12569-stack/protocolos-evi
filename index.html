@@ -1339,9 +1339,26 @@ function potReparto(t, E) {
   var m = t.potU === 'kVA' ? 1000 : 1;
   return ' (' + E.Sbt.map(function (x) { return +(x / m).toFixed(2); }).join(' + ') + ')';
 }
+// Tcc de datos técnicos: uno por cada bobina B.T. independiente (cada una tiene su cortocircuito), si no uno solo
+function filasTcc(p, E, seco, excel) {
+  var t = p.tec, dis = N(t.vccD), nom = seco ? 'Vcc' : 'Tcc';
+  var indep = E.btV.length > 1 && !E.auto && t.btTipo === 'independiente';
+  var bobinas = indep ? E.btV.map(function (v, j) { return j; }) : [null];
+  return bobinas.map(function (bi) {
+    var ci = -1;
+    E.cc.forEach(function (c, k) { if (ci < 0 && (bi === null || c.bi === bi)) ci = k; });
+    var med = ci >= 0 ? E.cc[ci].Vccref : NaN;
+    var txt = OK(med) ? Calc.fmt(med, 2) : (t.vccD !== '' ? t.vccD : '');
+    var at = '';
+    if (excel && ci >= 0) {
+      var ref = '{c' + ci + '_vr}';
+      at = ' data-f="' + esc('IF(' + ref + '="",' + (OK(dis) ? dis : '""') + ',' + ref + ')') + '" data-z="0.00&quot; %&quot;"' + (OK(med) || OK(dis) ? ' data-n="' + (OK(med) ? med : dis) + '"' : '');
+    }
+    return [nom + (bi === null ? '' : ' (' + fmtTension(E.btV[bi]) + ')'), txt !== '' ? txt + ' %' : '', '', at];
+  });
+}
 function datosTecnicos(p, E, LD, unidV, tccExcel) {
   var t = p.tec, c1, c2, c3, seco = !!E.t.seco;
-  var tcc = OK(E.vccMedido) ? Calc.fmt(E.vccMedido, 2) : (t.vccD !== '' ? t.vccD : '');
   var mt = E.atV.map(function (x) { return E.enKV ? Calc.kv(x) : x; }).join(' - ');
   var bt = E.btV.filter(OK).map(function (x) { return E.enKV ? Calc.kv(x) : x; }).join(' - ');
   var grupos = unicos(E.niveles.map(function (n) { return n.g; })).join(' - ');
@@ -1352,7 +1369,7 @@ function datosTecnicos(p, E, LD, unidV, tccExcel) {
     c2 = [['Relación TT', m.relTT], ['Potencia / clase TT', [m.ttPot, m.ttClase].filter(Boolean).join(' – cl. ')], ['Relación TC', m.relTC], ['Potencia / clase TC', [m.tcPot, m.tcClase].filter(Boolean).join(' – cl. ')], ['Conexión', m.conexion], ['Polaridad', m.polaridad]];
     c3 = [['Nivel de Aislamiento', t.aisMT, 'KV BIL'], ['Ith', m.ith, 'kA'], ['Idyn', m.idyn, 'kA'], ['Montaje', t.montaje], ['Refrigeración', t.refr], ['Aceite', t.aceite], ['Altitud', t.alt, 'm.s.n.m.'], ['T amb máx.', m.tambMax, '°C'], ['Peso total', t.pesoTotal, 'Kg.']];
   } else {
-    c1 = [['Marca', p.cab.marca], ['N° de Serie', p.cab.serie], ['Tipo', p.tipo], ['Año', p.cab.anio], ['Norma', p.cab.norma], ['Frecuencia', t.frec + ' Hz'], [seco ? 'Vcc' : 'Tcc', tcc !== '' ? tcc + ' %' : '', '', tccExcel ? ' data-f="' + esc('IF({c0_vr}="",' + (OK(N(t.vccD)) ? N(t.vccD) : '""') + ',{c0_vr})') + '" data-z="0.00&quot; %&quot;"' + (OK(E.vccMedido) || OK(N(t.vccD)) ? ' data-n="' + (OK(E.vccMedido) ? E.vccMedido : N(t.vccD)) + '"' : '') : '']];
+    c1 = [['Marca', p.cab.marca], ['N° de Serie', p.cab.serie], ['Tipo', p.tipo], ['Año', p.cab.anio], ['Norma', p.cab.norma], ['Frecuencia', t.frec + ' Hz']].concat(filasTcc(p, E, seco, tccExcel));
     c2 = [['Potencia', t.potDet || t.pot + potReparto(t, E), t.potDet ? '' : t.potU.toUpperCase()], ['Tensión Nom. ' + LD[0], mt, unidV], ['Tensión Nom. ' + LD[1], bt, unidV], ['Grupo de conexión', grupos]];
     if (seco) c2 = c2.concat([['Clase de Aislamiento', t.clase], ['Refrigeración', t.refr], ['Montaje', t.montaje]]);
     else c2 = c2.concat([['Montaje', t.montaje], ['Refrigeración', t.refr], ['Aceite', t.aceite]]);
