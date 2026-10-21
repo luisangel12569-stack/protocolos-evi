@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Protocolos de Pruebas – EVI</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjNGRhYmY3Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzE4NjRhYiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9InVybCgjZykiLz4KICA8cmVjdCB4PSIxNiIgeT0iMTMiIHdpZHRoPSIzMiIgaGVpZ2h0PSI0MiIgcng9IjUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSI0Ii8+CiAgPHJlY3QgeD0iMjQiIHk9IjgiIHdpZHRoPSIxNiIgaGVpZ2h0PSIxMCIgcng9IjMiIGZpbGw9IiNmZmYiLz4KICA8cGF0aCBkPSJNMjMgMzRsNiA2IDEyLTEzIiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CiAgPHBhdGggZD0iTTIzIDQ3aDE4IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNiIvPgo8L3N2Zz4K">
 <style>:root { --rojo: #E5322D; --amarillo: #FFE600; --gris: #2F3337; --fondo: #eef0f2; --borde: #c9cdd2; --ok: #0a7d2c; --bad: #c8102e; --warn: #ffe27a; --miss: #fff3b0; }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
@@ -11,6 +12,7 @@ body { font-family: "Segoe UI", Arial, sans-serif; font-size: 14px; color: #1d21
 header { background: var(--gris); color: #fff; display: flex; align-items: center; gap: 12px; padding: 6px 12px; flex-wrap: wrap; border-bottom: 4px solid var(--rojo); }
 header .marca { font-weight: 700; font-size: 16px; white-space: nowrap; }
 header .marca span { color: var(--amarillo); }
+header .marca-logo { width: 24px; height: 24px; vertical-align: -6px; margin-right: 8px; border-radius: 5px; }
 #pasos { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
 .paso { background: transparent; border: 1px solid #5b6168; color: #dfe3e6; padding: 7px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; }
 .paso b { display: inline-block; width: 20px; height: 20px; line-height: 20px; border-radius: 50%; background: #5b6168; color: #fff; text-align: center; font-size: 12px; margin-right: 4px; }
@@ -207,7 +209,7 @@ table.x + table.x { margin-top: -0.6pt; }
 </head>
 <body>
 <header>
-  <div class="marca">EVI <span>·</span> Protocolos de pruebas</div>
+  <div class="marca"><img class="marca-logo" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjNGRhYmY3Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzE4NjRhYiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9InVybCgjZykiLz4KICA8cmVjdCB4PSIxNiIgeT0iMTMiIHdpZHRoPSIzMiIgaGVpZ2h0PSI0MiIgcng9IjUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSI0Ii8+CiAgPHJlY3QgeD0iMjQiIHk9IjgiIHdpZHRoPSIxNiIgaGVpZ2h0PSIxMCIgcng9IjMiIGZpbGw9IiNmZmYiLz4KICA8cGF0aCBkPSJNMjMgMzRsNiA2IDEyLTEzIiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CiAgPHBhdGggZD0iTTIzIDQ3aDE4IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNiIvPgo8L3N2Zz4K" alt="">EVI <span>·</span> Protocolos de pruebas</div>
   <nav id="pasos"></nav>
   <div class="der"><span id="guardado"></span><button class="btn" data-a="protocolos">📁 Protocolos</button><button class="btn" data-a="ajustes">⚙ Ajustes</button></div>
 </header>
@@ -681,7 +683,7 @@ function nuevoProtocolo(tipo, cfg) {
     cab: { cliente: '', proyecto: '', ot: '', serie: '', anio: String(new Date().getFullYear()), marca: 'ELECTRO VOLT INGs.', norma: t.norma, fecha: hoy() },
     tec: {
       titulo: t.titulo, pot: t.pot, potU: t.potU, potDet: '',
-      btTipo: 'derivada',
+      btTipo: 'derivada', btPot: [],
       niveles: t.niveles.map(function (n) { return { v: n.v, g: n.g, n: n.n, pct: n.pct, bt: n.bt || 0 }; }),
       bt: t.bt.slice(), fases: t.fases, frec: 60, alt: 1000, montaje: t.montaje, refr: t.refr,
       aceite: t.aceite, clase: t.clase, ip: t.ip || '', aisMT: t.aisMT, aisBT: t.aisBT, bilExt: '',
@@ -774,7 +776,7 @@ function sincronizarAis(p) {
 
 // Conversión del cortocircuito al 100 % de In, paso a paso (para el Excel y el paso 3)
 function pasosCC(c, E, p) {
-  var D = Calc.fmtD, D2 = function (x) { return OK(x) ? x.toFixed(2) : ''; }, S = E.S, nV = function (x) { return String(+(+x).toFixed(2)); }, Vn = c.vtap, I = N(c.row.I), V = N(c.row.V), k = c.factor;
+  var D = Calc.fmtD, D2 = function (x) { return OK(x) ? x.toFixed(2) : ''; }, S = c.S || E.S, nV = function (x) { return String(+(+x).toFixed(2)); }, Vn = c.vtap, I = N(c.row.I), V = N(c.row.V), k = c.factor;
   var W = (c.row.W || []).slice(0, E.fases === 1 ? 1 : 3).map(N).filter(OK);
   var L = [];
   L.push('1) Corriente nominal de la posición: In = ' + (E.fases === 1 ? 'S / Vn = ' + Math.round(S) + ' / ' + nV(Vn) : 'S / (√3 × Vn) = ' + Math.round(S) + ' / (1.732 × ' + nV(Vn) + ')') + ' = ' + D(c.In) + ' A');
@@ -821,7 +823,12 @@ function estructura(p, cfg) {
   E.enKV = Math.max.apply(null, E.atV.concat([0])) >= 1000;
   E.InAT = E.atV.map(function (v) { return Calc.corriente(E.S, v, E.fases); });
   E.btV = tec.bt.map(N);
-  E.InBT = E.btV.map(function (v) { return Calc.corriente(E.S, v, E.fases); });
+  // Potencia repartida entre las tensiones B.T. (ej. 400 = 200 + 200): cada una con su corriente; vacío = potencia total
+  var bp = tec.btPot || [], multS = tec.potU === 'kVA' ? 1000 : 1;
+  E.Sbt = E.btV.map(function (v, j) { var x = N(bp[j]); return E.btV.length > 1 && !E.auto && OK(x) && x > 0 ? x * multS : E.S; });
+  E.potRep = E.Sbt.some(function (s) { return s !== E.S; });
+  E.InBT = E.btV.map(function (v, j) { return Calc.corriente(E.Sbt[j], v, E.fases); });
+  E.InBTtot = E.btV.map(function (v) { return Calc.corriente(E.S, v, E.fases); });
   E.mtTxt = listaTension(E.atV, E.enKV);
   E.btTxt = listaTension(E.btV, E.enKV);
   var grupos = unicos(E.niveles.map(function (n) { return n.g; }));
@@ -895,7 +902,7 @@ function estructura(p, cfg) {
 
   // Vacío
   var vac = p.med.vac, btI = N(vac.bt) || 0;
-  E.vac = Calc.vacio(vac.I.slice(0, E.fases), vac.W.slice(0, E.fases === 1 ? 1 : 3), E.InBT[btI]);
+  E.vac = Calc.vacio(vac.I.slice(0, E.fases), vac.W.slice(0, E.fases === 1 ? 1 : 3), E.InBTtot[btI]);
   E.vac.V = OK(N(vac.V)) ? N(vac.V) : E.btV[btI];
   E.vac.Vat = E.sal ? E.sal.nivel.v : E.atV[0];
   E.vac.p0D = N(tec.p0D);
@@ -909,18 +916,19 @@ function estructura(p, cfg) {
     var ti = row.tap === '' || row.tap === undefined ? nv.n : N(row.tap);
     if (!(ti >= 0 && ti < nv.taps.length)) ti = nv.n;
     var vtap = nv.taps[ti];
-    var InAT = Calc.corriente(E.S, vtap, E.fases);
     var bi = row.bt !== undefined && row.bt !== '' && OK(E.btV[N(row.bt)]) ? N(row.bt) : E.btV.indexOf(nv.vbt); if (bi < 0) bi = 0;
+    var Sc = E.Sbt[bi] || E.S; // potencia de la bobina B.T. en prueba
+    var InAT = Calc.corriente(Sc, vtap, E.fases);
     var InBT = E.InBT[bi];
     var rAT = E.resRows.filter(function (r) { return r.lado === 'AT' && r.v === nv.v; })[0];
     var rBT = E.resRows.filter(function (r) { return r.lado === 'BT' && r.v === E.btV[bi]; })[0];
     var c = Calc.cortocircuito({
-      S: E.S, fases: E.fases, Vtap: vtap, InAT: InAT, InBT: InBT, Imed: row.I, Vmed: row.V,
+      S: Sc, fases: E.fases, Vtap: vtap, InAT: InAT, InBT: InBT, Imed: row.I, Vmed: row.V,
       W: (row.W || []).slice(0, E.fases === 1 ? 1 : 3), Tamb: row.tamb, Tref: E.tref, modo: p.opt.modoCorr, k: E.k,
       RAT: rAT ? rAT.prom : NaN, RATpn: rAT ? rAT.pn : false,
       RBT: rBT ? rBT.prom / 1000 : NaN, RBTpn: rBT ? rBT.pn : false, Tres: p.med.res.tmed
     });
-    c.ri = ri; c.nivel = nv; c.ti = ti; c.bi = bi; c.vbt = E.btV[bi]; c.label = nv.labels[ti]; c.vtap = vtap; c.In = InAT; c.row = row;
+    c.ri = ri; c.nivel = nv; c.ti = ti; c.bi = bi; c.vbt = E.btV[bi]; c.label = nv.labels[ti]; c.vtap = vtap; c.In = InAT; c.S = Sc; c.row = row;
     c.vccD = N(tec.vccD); c.pccD = N(tec.pccD);
     c.difV = OK(c.Vccref) && OK(c.vccD) ? (c.Vccref - c.vccD) / c.vccD * 100 : NaN;
     c.difP = OK(c.Pref) && OK(c.pccD) ? (c.Pref - c.pccD) / c.pccD * 100 : NaN;
@@ -1009,6 +1017,7 @@ function validar(p, E) {
   if (!serv && !E.tmm && !OK(E.S)) err('Falta la potencia.');
   if (!E.atV.length) err('Falta la tensión ' + p.tec.lados[0] + '.');
   if (!E.btV.filter(OK).length) err('Falta la tensión ' + p.tec.lados[1] + '.');
+  if (E.potRep && p.tec.btTipo === 'independiente' && OK(E.S) && Math.abs(E.Sbt.reduce(function (a, b) { return a + b; }, 0) - E.S) > 1) av('La suma de las potencias de las bobinas ' + p.tec.lados[1] + ' no da la potencia total.');
   p.tec.niveles.forEach(function (nv) { if (!Calc.parseGrupo(nv.g).valido) err('Grupo de conexión no reconocido: "' + nv.g + '".'); });
   var pr = p.pruebas;
   if (pr.ais) p.med.ais.rows.forEach(function (r) { if (!OK(Calc.parseOhm(r.val))) err('Aislamiento: falta ' + r.lbl + '.'); });
@@ -1324,6 +1333,12 @@ function encabezado(p, E, pag, total, B) {
     '<tr><td class="cel l">CLIENTE</td><td class="b">' + esc(p.cab.cliente) + (p.cab.proyecto ? ' – ' + esc(p.cab.proyecto) : '') + '</td><td class="cel l">O.T.</td><td class="b">' + esc(p.cab.ot) + '</td></tr></table>';
 }
 
+// Potencia repartida entre las tensiones B.T.: "400 (200 + 200)"
+function potReparto(t, E) {
+  if (!E.potRep) return '';
+  var m = t.potU === 'kVA' ? 1000 : 1;
+  return ' (' + E.Sbt.map(function (x) { return +(x / m).toFixed(2); }).join(' + ') + ')';
+}
 function datosTecnicos(p, E, LD, unidV, tccExcel) {
   var t = p.tec, c1, c2, c3, seco = !!E.t.seco;
   var tcc = OK(E.vccMedido) ? Calc.fmt(E.vccMedido, 2) : (t.vccD !== '' ? t.vccD : '');
@@ -1338,7 +1353,7 @@ function datosTecnicos(p, E, LD, unidV, tccExcel) {
     c3 = [['Nivel de Aislamiento', t.aisMT, 'KV BIL'], ['Ith', m.ith, 'kA'], ['Idyn', m.idyn, 'kA'], ['Montaje', t.montaje], ['Refrigeración', t.refr], ['Aceite', t.aceite], ['Altitud', t.alt, 'm.s.n.m.'], ['T amb máx.', m.tambMax, '°C'], ['Peso total', t.pesoTotal, 'Kg.']];
   } else {
     c1 = [['Marca', p.cab.marca], ['N° de Serie', p.cab.serie], ['Tipo', p.tipo], ['Año', p.cab.anio], ['Norma', p.cab.norma], ['Frecuencia', t.frec + ' Hz'], [seco ? 'Vcc' : 'Tcc', tcc !== '' ? tcc + ' %' : '', '', tccExcel ? ' data-f="' + esc('IF({c0_vr}="",' + (OK(N(t.vccD)) ? N(t.vccD) : '""') + ',{c0_vr})') + '" data-z="0.00&quot; %&quot;"' + (OK(E.vccMedido) || OK(N(t.vccD)) ? ' data-n="' + (OK(E.vccMedido) ? E.vccMedido : N(t.vccD)) + '"' : '') : '']];
-    c2 = [['Potencia', t.potDet || t.pot, t.potDet ? '' : t.potU.toUpperCase()], ['Tensión Nom. ' + LD[0], mt, unidV], ['Tensión Nom. ' + LD[1], bt, unidV], ['Grupo de conexión', grupos]];
+    c2 = [['Potencia', t.potDet || t.pot + potReparto(t, E), t.potDet ? '' : t.potU.toUpperCase()], ['Tensión Nom. ' + LD[0], mt, unidV], ['Tensión Nom. ' + LD[1], bt, unidV], ['Grupo de conexión', grupos]];
     if (seco) c2 = c2.concat([['Clase de Aislamiento', t.clase], ['Refrigeración', t.refr], ['Montaje', t.montaje]]);
     else c2 = c2.concat([['Montaje', t.montaje], ['Refrigeración', t.refr], ['Aceite', t.aceite]]);
     c3 = [['Nivel de Aislamiento ' + LD[0], t.aisMT, 'KV BIL'], ['Nivel de Aislamiento ' + LD[1], t.aisBT, 'KV BIL'], ['Corriente Nominal ' + LD[0], inAT, 'A.'], ['Corriente Nominal ' + LD[1], inBT, 'A.'], ['Altitud', t.alt, 'm.s.n.m.']];
@@ -1384,7 +1399,7 @@ function renderServicio(p, cfg, opts) {
   function cols(a) { return '<colgroup>' + a.map(function (w) { return '<col style="width:' + w + '%">'; }).join('') + '</colgroup>'; }
   function llenar(x) { return '<td class="llenar">' + (B || x === undefined || x === null ? '' : esc(x)) + '</td>'; }
   function tens(x) { return x >= 1000 ? Calc.kv(x) + ' kV' : x + ' V'; }
-  var pot = t.potDet || (OK(N(t.pot)) ? t.pot + ' ' + t.potU : '');
+  var pot = t.potDet || (OK(N(t.pot)) ? t.pot + potReparto(t, E) + ' ' + t.potU : '');
   var titulo = 'PROTOCOLO DE SERVICIO – ' + t.titulo + (pot ? ' DE ' + pot.toUpperCase() : '');
   var grupos = unicos(E.niveles.map(function (n) { return n.g; })).join(' – ');
   var mt = E.atV.map(tens).join(' – ') + (E.atV.length === 1 && E.regTxt ? ' (' + E.regTxt + ')' : '');
@@ -1551,6 +1566,9 @@ function formPaso2(p, cfg) {
         'Bobinas independientes: cada una tiene su propia impedancia, así que se hace un cortocircuito por cada bobina (y por cada tensión ' + esc(t.lados[0]) + ').' :
         'Bobina con derivación: es un solo devanado, así que basta un cortocircuito con la bobina completa (tensión mayor), uno por cada tensión ' + esc(t.lados[0]) + '.') +
       ' La relación se mide con cada tensión ' + esc(t.lados[0]) + ' contra cada tensión ' + esc(t.lados[1]) + '.</p></div>';
+    h += '<div class="g4">' + t.bt.map(function (v, j) {
+      return campo('Potencia ' + esc(t.lados[1]) + ' ' + (OK(N(v)) ? fmtTension(N(v)) : j + 1) + ' (' + esc(t.potU) + ')', inp('tec.btPot.' + j, (t.btPot || [])[j], { s: 1, num: 1, ph: t.pot }));
+    }).join('') + '<p class="ayuda span2">Si la potencia se reparte (ej. 400 = 200 + 200), pon la de cada tensión ' + esc(t.lados[1]) + '. Vacío = la potencia total. Con eso se calculan su corriente nominal y su cortocircuito.</p></div>';
   }
   h += '<p class="ayuda">Corriente nominal: ' + esc(t.lados[0]) + ' <b>' + (E.inATtxt || '—') + ' A</b> · ' + esc(t.lados[1]) + ' <b>' + (E.inBTtxt || '—') + ' A</b></p>';
   if (!E.tmm && !serv) {
@@ -1855,7 +1873,7 @@ function exportarExcel(p, cfg) {
       ['El cuadro tiene las lecturas reales; las fórmulas las llevan al 100 % de In: la tensión crece en proporción a la corriente y las pérdidas con su cuadrado.']];
     parciales.forEach(function (c) {
       notas.push(['']);
-      notas.push(['Posición ' + Math.round(c.vtap) + (E.btV.length > 1 ? ' / ' + c.vbt : '') + ' V (Vn = ' + (+(+c.vtap).toFixed(2)) + ' V, S = ' + Math.round(E.S) + ' VA):', true]);
+      notas.push(['Posición ' + Math.round(c.vtap) + (E.btV.length > 1 ? ' / ' + c.vbt : '') + ' V (Vn = ' + (+(+c.vtap).toFixed(2)) + ' V, S = ' + Math.round(c.S || E.S) + ' VA):', true]);
       pasosCC(c, E, p).forEach(function (l) { notas.push(['   ' + l]); });
     });
     notas.push(['']);
@@ -2198,7 +2216,7 @@ var ACC = {
   quitarNivel: function (i) { P.tec.niveles.splice(+i, 1); reindexarRel(+i, null); P.tec.salNivel = 0; P.med.cc.rows.forEach(function (r) { if (+r.nivel >= P.tec.niveles.length) r.nivel = 0; }); sincronizarFicha(P); cambio(true); },
   agregarBT: function () { P.tec.bt.push(''); sincronizarFicha(P); cambio(true); },
   quitarBT: function (i) {
-    P.tec.bt.splice(+i, 1); P.tec.niveles.forEach(function (n) { if (+n.bt >= P.tec.bt.length) n.bt = 0; }); reindexarRel(null, +i);
+    P.tec.bt.splice(+i, 1); if (P.tec.btPot) P.tec.btPot.splice(+i, 1); P.tec.niveles.forEach(function (n) { if (+n.bt >= P.tec.bt.length) n.bt = 0; }); reindexarRel(null, +i);
     P.med.cc.rows = P.med.cc.rows.filter(function (r) { return +r.bt !== +i || P.tec.bt.length === 0; }); P.med.cc.rows.forEach(function (r) { if (+r.bt > +i) r.bt = +r.bt - 1; });
     if (+P.med.vac.bt >= P.tec.bt.length) P.med.vac.bt = 0;
     sincronizarFicha(P); cambio(true);
