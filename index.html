@@ -862,7 +862,7 @@ function estructura(p, cfg) {
   } else {
     E.resRows = [];
     E.atV.forEach(function (v, j) {
-      E.resRows.push({ key: 'AT' + j, lado: 'AT', v: v, lbl: tec.lados[0] + ' ' + fmtTension(v), cols: Calc.bornesRes('AT', g0, tec.bornes, E.mono), u: 'Ω', pn: false });
+      E.resRows.push({ key: 'AT' + j, lado: 'AT', v: v, lbl: tec.lados[0] + ' ' + fmtTension(v), cols: Calc.bornesRes('AT', g0, tec.bornes, E.mono), u: p.med.res.uAT === 'mΩ' ? 'mΩ' : 'Ω', pn: false });
     });
     var pg = Calc.parseGrupo(g0), modoBT = p.med.res.btModo || 'fn'; // protocolos guardados antes de la opción: fase-neutro
     E.resNeutro = pg.lvN && !E.mono && !E.auto;
@@ -928,7 +928,7 @@ function estructura(p, cfg) {
     var c = Calc.cortocircuito({
       S: Sc, fases: E.fases, Vtap: vtap, InAT: InAT, InBT: InBT, Imed: row.I, Vmed: row.V,
       W: (row.W || []).slice(0, E.fases === 1 ? 1 : 3), Tamb: row.tamb, Tref: E.tref, modo: p.opt.modoCorr, k: E.k,
-      RAT: rAT ? rAT.prom : NaN, RATpn: rAT ? rAT.pn : false,
+      RAT: rAT ? (rAT.u === 'mΩ' ? rAT.prom / 1000 : rAT.prom) : NaN, RATpn: rAT ? rAT.pn : false,
       RBT: rBT ? rBT.prom / 1000 : NaN, RBTpn: rBT ? rBT.pn : false, Tres: p.med.res.tmed
     });
     c.ri = ri; c.nivel = nv; c.ti = ti; c.bi = bi; c.vbt = E.btV[bi]; c.label = nv.labels[ti]; c.vtap = vtap; c.In = InAT; c.S = Sc; c.row = row;
@@ -1186,22 +1186,29 @@ function renderProtocolo(p, cfg, opts) {
         h = bar('res');
         var izq = E.resRows.filter(function (r, i) { return E.tmm ? i < 2 : r.lado === 'AT'; });
         var der = E.resRows.filter(function (r, i) { return E.tmm ? i >= 2 : r.lado !== 'AT'; });
-        var mitad = function (lista, titulo) {
-          if (!lista.length) return '';
-          var nc = Math.max.apply(null, lista.map(function (r) { return r.cols.length; }));
-          var s = '<table class="x">' + cols([22].concat(Array(nc).fill(78 / nc))) + '<tr><td colspan="' + (nc + 1) + '" class="b">' + titulo + '</td></tr>';
-          lista.forEach(function (r) {
-            var et = E.tmm ? esc(r.lbl) : (r.v >= 1000 ? Calc.kv(r.v) + ' KV' : r.v + ' V');
-            var relleno = r.cols.length < nc ? '<td colspan="' + (nc - r.cols.length) + '"></td>' : '';
-            s += '<tr><td rowspan="2" class="b">' + et + '</td>' + r.cols.map(function (c) { return '<td>' + c.replace('-', ' - ') + '</td>'; }).join('') + relleno + '</tr>' +
-              '<tr>' + r.cols.map(function (c, i) { return v(dd(r.vals[i])); }).join('') + relleno + '</tr>';
-          });
-          return s + '</table>';
-        };
         var uA = (izq[0] || {}).u || 'Ω', uB = (der[0] || {}).u || 'mΩ';
         var tA = E.tmm ? 'RESISTENCIA TT (' + uA + ')' : seco ? 'RESISTENCIA BOBINA ' + (E.auto ? 'DE ENTRADA' : 'PRIMARIA') + ' (' + uA + ')' : 'RESISTENCIA  M.T. (' + uA + ')';
         var tB = E.tmm ? 'RESISTENCIA TC' : seco ? 'RESISTENCIA BOBINA ' + (E.auto ? 'DE SALIDA' : 'SECUNDARIA') + ' (' + uB + ')' : 'RESISTENCIA  B.T. (' + uB + ')';
-        h += '<div class="lado">' + mitad(izq, tA) + mitad(der, tB) + '</div>';
+        // Una sola tabla para M.T. y B.T.: los títulos quedan a la misma altura y el lado con menos
+        // tensiones estira su última fila hasta igualar al otro
+        var ncA = Math.max.apply(null, [1].concat(izq.map(function (r) { return r.cols.length; })));
+        var ncB = Math.max.apply(null, [1].concat(der.map(function (r) { return r.cols.length; })));
+        var nFil = 2 * Math.max(izq.length, der.length, 1), filas = [];
+        for (var q = 0; q < nFil; q++) filas.push('');
+        var mitad = function (lista, nc) {
+          if (!lista.length) { filas[0] += '<td colspan="' + (nc + 1) + '" rowspan="' + nFil + '"></td>'; return; }
+          lista.forEach(function (r, k) {
+            var r0 = 2 * k, alto = k === lista.length - 1 ? nFil - r0 : 2;
+            var et = E.tmm ? esc(r.lbl) : (r.v >= 1000 ? Calc.kv(r.v) + ' KV' : r.v + ' V');
+            var relleno = function (rs) { return r.cols.length < nc ? '<td colspan="' + (nc - r.cols.length) + '"' + (rs > 1 ? ' rowspan="' + rs + '"' : '') + '></td>' : ''; };
+            filas[r0] += '<td rowspan="' + alto + '" class="b">' + et + '</td>' + r.cols.map(function (c) { return '<td>' + c.replace('-', ' - ') + '</td>'; }).join('') + relleno(1);
+            filas[r0 + 1] += r.cols.map(function (c, i) { return v(dd(r.vals[i])).replace('<td', '<td' + (alto > 2 ? ' rowspan="' + (alto - 1) + '"' : '')); }).join('') + relleno(alto - 1);
+          });
+        };
+        mitad(izq, ncA); mitad(der, ncB);
+        h += '<table class="x res">' + cols([11].concat(Array(ncA).fill(39 / ncA)).concat([11]).concat(Array(ncB).fill(39 / ncB))) +
+          '<tr><td colspan="' + (ncA + 1) + '" class="b">' + tA + '</td><td colspan="' + (ncB + 1) + '" class="b">' + tB + '</td></tr>' +
+          filas.map(function (f) { return '<tr>' + f + '</tr>'; }).join('') + '</table>';
         var tm = N(p.med.res.tmed);
         if (OK(tm) && !B) h += '<div class="nota">Temperatura de medición: ' + tm + ' °C</div>';
         break;
@@ -1658,6 +1665,7 @@ function formPaso3(p, cfg) {
         break;
       case 'res':
         h2 += '<div class="g4">' + campo('T° de medición (°C)', inp('med.res.tmed', p.med.res.tmed, { num: 1, ph: '= T amb' })) + campo('Umbral desbalance (%)', inp('med.res.umbral', p.med.res.umbral, { num: 1 })) +
+          (p.med.res.rows ? '' : campo('Unidad ' + esc(p.tec.lados[0]), sel('med.res.uAT', p.med.res.uAT === 'mΩ' ? 'mΩ' : 'Ω', [['Ω', 'Ω (ohm)'], ['mΩ', 'mΩ (miliohm)']], { s: 1 }))) +
           (E.resNeutro ? campo('Medida en ' + esc(p.tec.lados[1]), sel('med.res.btModo', p.med.res.btModo || 'fn', [['ff', 'Fase-fase (' + (p.tec.bornes === 'H' ? 'X1-X2' : 'u-v') + ')'], ['fn', 'Fase-neutro (' + (p.tec.bornes === 'H' ? 'X1-X0' : 'n-u') + ')']], { s: 1 })) : '') +
           '<div class="campo span2">' + chk('med.res.corr', p.med.res.corr, 'Mostrar corrección a T° de referencia (' + (OK(E.tref) ? E.tref + ' °C' : 'sin Tref') + ')') + '</div></div>';
         h2 += '<table class="ed"><tr><th>Devanado</th><th colspan="3">Valores</th><th>Desbalance</th><th>Promedio</th></tr>' + E.resRows.map(function (r) {
