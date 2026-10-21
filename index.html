@@ -47,6 +47,7 @@ input[data-req]:placeholder-shown, input[data-req][value=""] { background: var(-
 .chk { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; margin: 4px 14px 4px 0; }
 .chk input { width: 18px; height: 18px; }
 .fila-in { display: flex; gap: 6px; align-items: center; }
+.fila-in > select { width: auto; flex: none; }
 .ayuda { font-size: 12px; color: #5a6168; margin: 6px 0; }
 .btn { font: inherit; font-size: 14px; padding: 7px 14px; border-radius: 6px; border: 1px solid #aab0b6; background: #f4f5f6; cursor: pointer; color: #1d2125; display: inline-flex; align-items: center; gap: 6px; }
 .btn:hover { background: #e7e9eb; }
@@ -794,6 +795,8 @@ function pasosCC(c, E, p) {
   return L;
 }
 
+// La orden puede ser OT (orden de trabajo) u OS (orden de servicio)
+function docTipo(p) { return (p.cab && p.cab.otTipo) === 'OS' ? 'OS' : 'OT'; }
 function fmtTension(v) { v = N(v); if (!OK(v)) return ''; return v >= 1000 ? Calc.kv(v) + ' kV' : Calc.fmtV(v) + ' V'; }
 function unicos(arr) { var o = []; arr.forEach(function (x) { if (o.indexOf(x) < 0) o.push(x); }); return o; }
 function listaTension(vs, enKV) {
@@ -1000,7 +1003,7 @@ function tituloProtocolo(p, E) {
 
 function nombreArchivo(p) {
   var pot = (p.tipo === 'TMM' ? '' : p.tec.pot + p.tec.potU.toUpperCase());
-  var s = 'OT ' + (p.cab.ot || 'SN') + ' - PROTOCOLO - ' + p.tipo + (pot ? ' ' + pot : '') + ' - ' + (p.cab.cliente || 'CLIENTE') + ' - ' + (p.cab.serie || 'SERIE');
+  var s = docTipo(p) + ' ' + (p.cab.ot || 'SN') + ' - PROTOCOLO - ' + p.tipo + (pot ? ' ' + pot : '') + ' - ' + (p.cab.cliente || 'CLIENTE') + ' - ' + (p.cab.serie || 'SERIE');
   return s.replace(/[\\/:*?"<>|]/g, '-');
 }
 
@@ -1012,7 +1015,7 @@ function validar(p, E) {
   function falta(x) { return x === '' || x === undefined || x === null || (typeof x === 'number' && !isFinite(x)); }
   if (falta(p.cab.cliente)) err('Falta el cliente.');
   var serv = !!E.t.servicio;
-  if (!serv && falta(p.cab.ot)) err('Falta el N° de OT.');
+  if (!serv && falta(p.cab.ot)) err('Falta el N° de ' + docTipo(p) + '.');
   if (!serv && falta(p.cab.serie)) err('Falta el N° de serie.');
   if (!serv && !E.tmm && !OK(E.S)) err('Falta la potencia.');
   if (!E.atV.length) err('Falta la tensión ' + p.tec.lados[0] + '.');
@@ -1330,7 +1333,7 @@ function renderProtocolo(p, cfg, opts) {
 function encabezado(p, E, pag, total, B) {
   return '<table class="x"><colgroup><col style="width:14%"><col style="width:58%"><col style="width:10%"><col style="width:18%"></colgroup>' +
     '<tr><td colspan="4" class="titulo">' + esc(tituloProtocolo(p, E)) + (B ? ' – HOJA DE CAMPO' : '') + (total > 1 ? '<span class="pag">Página ' + pag + ' de ' + total + '</span>' : '') + '</td></tr>' +
-    '<tr><td class="cel l">CLIENTE</td><td class="b">' + esc(p.cab.cliente) + (p.cab.proyecto ? ' – ' + esc(p.cab.proyecto) : '') + '</td><td class="cel l">O.T.</td><td class="b">' + esc(p.cab.ot) + '</td></tr></table>';
+    '<tr><td class="cel l">CLIENTE</td><td class="b">' + esc(p.cab.cliente) + (p.cab.proyecto ? ' – ' + esc(p.cab.proyecto) : '') + '</td><td class="cel l">' + (docTipo(p) === 'OS' ? 'O.S.' : 'O.T.') + '</td><td class="b">' + esc(p.cab.ot) + '</td></tr></table>';
 }
 
 // Potencia repartida entre las tensiones B.T.: "400 (200 + 200)"
@@ -1425,7 +1428,7 @@ function renderServicio(p, cfg, opts) {
   function cabecera(pag, total) {
     return '<table class="x">' + cols([16, 44, 14, 26]) +
       '<tr><td colspan="4" class="titulo">' + esc(titulo) + (total > 1 ? '<span class="pag">Página ' + pag + ' de ' + total + '</span>' : '') + '</td></tr>' +
-      '<tr><td class="cel l">CLIENTE</td><td class="b l">' + esc(p.cab.cliente) + (p.cab.proyecto ? ' – ' + esc(p.cab.proyecto) : '') + '</td><td class="cel l">O.T.</td><td class="b">' + esc(p.cab.ot) + '</td></tr>' +
+      '<tr><td class="cel l">CLIENTE</td><td class="b l">' + esc(p.cab.cliente) + (p.cab.proyecto ? ' – ' + esc(p.cab.proyecto) : '') + '</td><td class="cel l">' + (docTipo(p) === 'OS' ? 'O.S.' : 'O.T.') + '</td><td class="b">' + esc(p.cab.ot) + '</td></tr>' +
       (pag > 1 ? '' :
         '<tr><td class="cel l">TENSIÓN ' + LD[0] + '</td><td class="b l">' + esc(mt) + '</td><td class="cel l">N° SERIE</td><td class="b">' + esc(p.cab.serie) + '</td></tr>' +
         '<tr><td class="cel l">TENSIÓN ' + LD[1] + '</td><td class="b l">' + esc(bt) + '</td><td class="cel l">MARCA</td><td class="b">' + esc(p.cab.marca) + '</td></tr>' +
@@ -1551,7 +1554,7 @@ function formPaso2(p, cfg) {
   if (serv) h += '<p class="ayuda">Formato para llenar en campo: solo aislamiento, resistencia y relación (con su teórica). Sin hoja membretada ni firmas.</p>';
   h += '<fieldset><legend>Cabecera</legend><div class="g4">' +
     campo('Cliente *', inp('cab.cliente', p.cab.cliente, { req: 1 }), 'span2') + campo('Proyecto', inp('cab.proyecto', p.cab.proyecto), 'span2') +
-    campo('N° OT' + (serv ? '' : ' *'), inp('cab.ot', p.cab.ot, { req: !serv })) + campo('N° de serie' + (serv ? '' : ' *'), inp('cab.serie', p.cab.serie, { req: !serv })) +
+    campo('N° de orden' + (serv ? '' : ' *'), '<div class="fila-in">' + sel('cab.otTipo', docTipo(p), [['OT', 'OT'], ['OS', 'OS']], { s: 1 }) + inp('cab.ot', p.cab.ot, { req: !serv }) + '</div>') + campo('N° de serie' + (serv ? '' : ' *'), inp('cab.serie', p.cab.serie, { req: !serv })) +
     campo('Año', inp('cab.anio', p.cab.anio)) + campo('Fecha de prueba', inp('cab.fecha', p.cab.fecha, { type: 'date' })) +
     campo('Marca', inp('cab.marca', p.cab.marca), 'span2') + campo('Norma', inp('cab.norma', p.cab.norma), 'span2') +
     campo('Título del equipo', inp('tec.titulo', t.titulo), 'span4') + '</div></fieldset>';
@@ -2122,7 +2125,7 @@ var PASOS = ['Tipo de equipo', 'Ficha técnica', 'Valores medidos', 'Vista previ
 function render() {
   var nav = document.getElementById('pasos');
   nav.innerHTML = PASOS.map(function (s, i) { return '<button class="paso' + (PASO === i + 1 ? ' activo' : '') + '" data-a="paso" data-arg="' + (i + 1) + '"><b>' + (i + 1) + '</b> ' + s + '</button>'; }).join('');
-  document.getElementById('actual').textContent = P ? (P.tipo + ' · OT ' + (P.cab.ot || '—') + ' · Serie ' + (P.cab.serie || '—') + (P.cab.cliente ? ' · ' + P.cab.cliente : '')) : '';
+  document.getElementById('actual').textContent = P ? (P.tipo + ' · ' + docTipo(P) + ' ' + (P.cab.ot || '—') + ' · Serie ' + (P.cab.serie || '—') + (P.cab.cliente ? ' · ' + P.cab.cliente : '')) : '';
   var f = document.getElementById('form');
   f.innerHTML = formHTML() + navPie();
   document.body.classList.toggle('sin-prev', PASO === 1);
@@ -2168,7 +2171,7 @@ function refrescarCalculos() {
     var n = nuevos[el.getAttribute('data-c')];
     if (n) { el.innerHTML = n.innerHTML; el.className = n.className; }
   });
-  document.getElementById('actual').textContent = P.tipo + ' · OT ' + (P.cab.ot || '—') + ' · Serie ' + (P.cab.serie || '—') + (P.cab.cliente ? ' · ' + P.cab.cliente : '');
+  document.getElementById('actual').textContent = P.tipo + ' · ' + docTipo(P) + ' ' + (P.cab.ot || '—') + ' · Serie ' + (P.cab.serie || '—') + (P.cab.cliente ? ' · ' + P.cab.cliente : '');
 }
 var tPrev;
 function cambio(estructural) {
@@ -2280,7 +2283,7 @@ var ACC = {
   dupDB: function (id) { var q = clone(DB.filter(function (x) { return x.id === id; })[0]); q.id = uid(); q.creado = Date.now(); q.cab.serie += ' (copia)'; DB.unshift(q); lsSet(K_DB, DB); renderDB(); },
   borrarDB: function (id) {
     var q = DB.filter(function (x) { return x.id === id; })[0];
-    if (!confirm('¿Eliminar el protocolo OT ' + q.cab.ot + ' serie ' + q.cab.serie + '?')) return;
+    if (!confirm('¿Eliminar el protocolo ' + docTipo(q) + ' ' + q.cab.ot + ' serie ' + q.cab.serie + '?')) return;
     DB = DB.filter(function (x) { return x.id !== id; }); lsSet(K_DB, DB);
     if (P.id === id) { P = DB[0] || ejemplo1440(); guardarP(); render(); }
     renderDB();
@@ -2405,7 +2408,7 @@ function abrirModal(cual) {
   if (cual === 'ajustes') renderAjustes();
   if (cual === 'dup') {
     document.getElementById('modal-c').innerHTML = '<div class="m-cab"><h2>Duplicar para otras series</h2>' + boton('cerrar', '✕', { cls: 'btn chico' }) + '</div>' +
-      '<p>Se copia la ficha técnica de la OT ' + esc(P.cab.ot) + ' (serie ' + esc(P.cab.serie) + '). Escribe las nuevas series separadas por coma o espacio:</p>' +
+      '<p>Se copia la ficha técnica de la ' + docTipo(P) + ' ' + esc(P.cab.ot) + ' (serie ' + esc(P.cab.serie) + '). Escribe las nuevas series separadas por coma o espacio:</p>' +
       '<input id="dup-series" placeholder="ej. 15709, 15710" style="width:100%">' +
       '<label class="chk"><input type="checkbox" id="dup-med"> Copiar también las mediciones (normalmente no)</label>' +
       '<div class="botones">' + boton('hacerDuplicado', 'Crear protocolos', { cls: 'btn prim grande' }) + '</div>';
@@ -2433,7 +2436,7 @@ function renderDB() {
     '<label>Desde <input type="date" id="f-desde" value="' + FILTRO.desde + '"></label><label>Hasta <input type="date" id="f-hasta" value="' + FILTRO.hasta + '"></label></div>' +
     '<div class="tabla-db"><table class="ed"><tr><th>OT</th><th>Serie</th><th>Tipo</th><th>Potencia</th><th>Cliente</th><th>Fecha</th><th></th></tr>' +
     l.map(function (x) {
-      return '<tr' + (x.id === P.id ? ' class="sel"' : '') + '><td>' + esc(x.cab.ot) + '</td><td>' + esc(x.cab.serie) + '</td><td>' + esc(x.tipo) + '</td><td>' + esc(x.tec.pot) + ' ' + esc(x.tec.potU) + '</td><td>' + esc(x.cab.cliente) + '</td><td>' + esc(fechaTxt(x.cab.fecha)) + '</td><td class="acc">' +
+      return '<tr' + (x.id === P.id ? ' class="sel"' : '') + '><td>' + (docTipo(x) === 'OS' ? 'OS ' : '') + esc(x.cab.ot) + '</td><td>' + esc(x.cab.serie) + '</td><td>' + esc(x.tipo) + '</td><td>' + esc(x.tec.pot) + ' ' + esc(x.tec.potU) + '</td><td>' + esc(x.cab.cliente) + '</td><td>' + esc(fechaTxt(x.cab.fecha)) + '</td><td class="acc">' +
         boton('abrir', 'Abrir', { arg: x.id, cls: 'btn chico prim' }) + boton('dupDB', 'Copiar', { arg: x.id, cls: 'btn chico' }) + boton('borrarDB', '✕', { arg: x.id, cls: 'btn chico peligro' }) + '</td></tr>';
     }).join('') + '</table></div>' +
     '<div class="botones">' + boton('nuevoVacio', '+ Nuevo protocolo', { cls: 'btn prim' }) + boton('respaldo', '⬇ Exportar todo (.json)') +
